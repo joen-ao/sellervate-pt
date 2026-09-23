@@ -216,3 +216,86 @@ insert into replies (id, brand_id, specialist_id, sent_at, channel, customer_mes
  $$I've had a look and your Barrier Cream is packed and sitting on today's collection, so "processing" is just our label not keeping up with the shelf. It should reach you Tuesday, Wednesday at the outside, which gets it to you before Thursday. If it hasn't turned up by Wednesday morning, message me here and I'll send a second one on to wherever you're staying rather than leave you without it. Have a good trip.$$)
 
 on conflict (id) do nothing;
+
+-- --------------------------------------------------------------- reviews
+-- 13 of the 20 replies are reviewed; the other 7 are the queue.
+-- Voltaire and Kraft&Co are Marta's (...0011), Lume is Nuria's (...0012) —
+-- which is the membership table doing its job, not a coincidence.
+-- Review id = 0001 + the reply's suffix, so ...0001101 reviews ...0000101.
+-- created_at sits a few hours after the reply's sent_at so trends have a
+-- real time axis rather than thirteen rows stamped now().
+insert into reviews (id, reply_id, reviewer_id, score, severity, categories, comment, created_at, acknowledged_at) values
+
+-- ==== Voltaire · reviewed by Marta ======================================
+
+('00000000-0000-0000-0000-000000001101','00000000-0000-0000-0000-000000000101',
+ '00000000-0000-0000-0000-000000000011', 1, 'critical',
+ '{no_order_history_check,wrong_facts}',
+ $$Two separate failures in one reply. You refunded on first contact, which the procedure rules out, and you told a customer holding his second unit that this was his first problem — the order history was one click away. "Always a dead battery, basically scrap" is also just not true, and it is exactly the kind of line the brand hears repeated back to them. No error code, no mileage, nothing to act on. Read this one back before your next Voltaire shift.$$,
+ now() - interval '1 day 1 hour', null),
+
+('00000000-0000-0000-0000-000000001102','00000000-0000-0000-0000-000000000102',
+ '00000000-0000-0000-0000-000000000011', 5, 'none', '{}',
+ $$This is the one to copy. Code and mileage asked for in the same breath, the article named instead of dropped in blind, and he knows what happens next. Keep doing exactly this.$$,
+ now() - interval '1 day 4 hours', now() - interval '12 hours'),
+
+('00000000-0000-0000-0000-000000001103','00000000-0000-0000-0000-000000000103',
+ '00000000-0000-0000-0000-000000000011', 4, 'none', '{}',
+ $$Diagnosis is right and the article reference is correct. The fourth sentence is three sentences wearing a coat — split it. Nothing wrong here, just make it readable at 7am on a phone.$$,
+ now() - interval '2 days 1 hour', null),
+
+('00000000-0000-0000-0000-000000001104','00000000-0000-0000-0000-000000000104',
+ '00000000-0000-0000-0000-000000000011', 2, 'minor', '{answered_wrong_question}',
+ $$Everything you wrote is accurate and none of it answers what he asked. He wanted range with a 90 kg rider on hills and got the charging table. Re-read the last line of the customer message before you start typing.$$,
+ now() - interval '6 days 2 hours', null),
+
+('00000000-0000-0000-0000-000000001105','00000000-0000-0000-0000-000000000105',
+ '00000000-0000-0000-0000-000000000011', 3, 'none', '{incomplete}',
+ $$Correct diagnosis and clean instructions. You left out that firmware 4.2 fixed this exact reading bug, so he will reseat the connector, see it again and write back. Not wrong — unfinished.$$,
+ now() - interval '8 days 22 hours', null),
+
+('00000000-0000-0000-0000-000000001106','00000000-0000-0000-0000-000000000106',
+ '00000000-0000-0000-0000-000000000011', 4, 'none', '{}',
+ $$Good plain explanation of IP54 without overpromising, and the charge-port warning is the part that actually saves the scooter. Ask for the mileage up front next time rather than conditionally.$$,
+ now() - interval '12 days 2 hours', null),
+
+-- ==== Kraft&Co · reviewed by Marta ======================================
+
+('00000000-0000-0000-0000-000000001201','00000000-0000-0000-0000-000000000201',
+ '00000000-0000-0000-0000-000000000011', 3, 'none', '{incomplete}',
+ $$Lead time is right and it came from the table. But 520 against a 640 pallet minimum is inside the 20% band, so the pallet line belonged in this reply — he comes back asking, and that is a second touch we did not need to spend.$$,
+ now() - interval '22 hours', null),
+
+('00000000-0000-0000-0000-000000001202','00000000-0000-0000-0000-000000000202',
+ '00000000-0000-0000-0000-000000000011', 2, 'minor', '{tone_off_brand}',
+ $$Right answer, wrong company. Five paragraphs of warmth for a SKU lookup that needed one line, and Kraft&Co asked us specifically for three lines and no small talk — this is the thing they notice and mention. You write this voice well for Voltaire. Check which brand you are in before you start typing.$$,
+ now() - interval '1 day 2 hours', null),
+
+('00000000-0000-0000-0000-000000001203','00000000-0000-0000-0000-000000000203',
+ '00000000-0000-0000-0000-000000000011', 5, 'none', '{}',
+ $$Textbook Kraft&Co. Both SKUs and both quantities confirmed back, lead time from the table, one action to close it. Three lines.$$,
+ now() - interval '2 days', null),
+
+('00000000-0000-0000-0000-000000001204','00000000-0000-0000-0000-000000000204',
+ '00000000-0000-0000-0000-000000000011', 4, 'none', '{}',
+ $$Clean. Print spec, table lead time, minimum and next step inside three lines. A plate cost range would have let him budget without writing again.$$,
+ now() - interval '5 days 1 hour', null),
+
+('00000000-0000-0000-0000-000000001205','00000000-0000-0000-0000-000000000205',
+ '00000000-0000-0000-0000-000000000011', 5, 'none', '{}',
+ $$Same person as the KC-1180 mailer reply, completely different execution. Shortfall accepted without an argument, the fix is dated, and you pre-empted the lead-time question instead of waiting for it. This is the voice.$$,
+ now() - interval '8 days 3 hours', null),
+
+('00000000-0000-0000-0000-000000001206','00000000-0000-0000-0000-000000000206',
+ '00000000-0000-0000-0000-000000000011', 1, 'critical', '{wrong_facts}',
+ $$The 11th is not in the table. Printed is 12 working days and there is no expedite path on flexo, so that date could not be met at the moment you sent it — and he has booked a trade show stand around it. Never quote a date the table does not give you. If the answer is no, the reply is no.$$,
+ now() - interval '11 days 1 hour', null),
+
+-- ==== Lume · reviewed by Nuria ==========================================
+
+('00000000-0000-0000-0000-000000001301','00000000-0000-0000-0000-000000000301',
+ '00000000-0000-0000-0000-000000000012', 4, 'none', '{}',
+ $$Warm without being vague, and you gave her the patch test and the replacement before anyone had to mention money. No medical language anywhere near it. Only thing missing is asking her to tell us how it goes, so we can close the loop.$$,
+ now() - interval '1 day 6 hours', null)
+
+on conflict (id) do nothing;
