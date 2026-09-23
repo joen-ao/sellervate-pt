@@ -1,7 +1,7 @@
 import { Skeleton } from '@/components/Skeleton';
 import { ROW_HEIGHT } from './QueueRow';
 
-// Suspense fallback for QueueView: same shell and row height as QueueRow, so nothing jumps.
+// loading.tsx for /queue: same shell and row height as QueueRow, so nothing jumps.
 export function QueueSkeleton() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-8" aria-busy="true" aria-label="Loading the queue">
