@@ -7,7 +7,9 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:reset": "npx --yes supabase@2.117.0 db reset",
+    "db:types": "npx --yes supabase@2.117.0 gen types typescript --local > lib/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",
