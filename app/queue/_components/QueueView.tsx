@@ -89,7 +89,7 @@ function QueueEmpty({ brands, brandName, status, page }: EmptyProps) {
   }
   return (
     <EmptyState title={`No ${status === 'all' ? '' : 'reviewed '}replies in the last ${QUEUE_WINDOW_HOURS} h.`}
-      body="Older replies are still reachable through Review next."
-      action={<ReviewNextButton />} />
+      body={`The list shows the last ${QUEUE_WINDOW_HOURS} h; Review next also reaches older unreviewed replies.`}
+      action={<Link className="btn btn-sm" href={queueHref({ status: 'unreviewed' })}>Back to unreviewed</Link>} />
   );
 }
