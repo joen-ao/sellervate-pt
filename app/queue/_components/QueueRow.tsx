@@ -6,7 +6,7 @@ import { relativeTime } from '@/lib/format';
 
 const scoreTone = (s: number) => (s <= 2 ? 'error' : s === 3 ? 'warning' : 'success');
 
-// h-16 is shared with the skeleton row in loading.tsx; change both together.
+// h-16 is shared with the skeleton row in QueueSkeleton; change both together.
 export const ROW_HEIGHT = 'h-16';
 
 export function QueueRow({ item }: { item: QueueItem }) {
