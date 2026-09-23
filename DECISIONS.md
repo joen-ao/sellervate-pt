@@ -45,8 +45,8 @@ on the request path and RLS protects every other consumer: the anon key
 (which, before 0002, could read every table through PostgREST under Supabase's
 default grants), a future ingester or report job, a bug.
 
-What the DAL-bug experiment shows: `asUser(dani, tx => tx\`select count(*) from
-replies\`)` — no specialist filter at all, the bug the spec asks us to simulate
+What the DAL-bug experiment shows: `` asUser(dani, tx => tx`select count(*) from
+replies`) `` — no specialist filter at all, the bug the spec asks us to simulate
 — returns 12, Dani's own. That is what defence in depth means. The spec's
 version (`remove .eq('specialist_id', u.id)` in `/api/me/reviews`) waits for
 that route to exist and to run through `asUser()`.
