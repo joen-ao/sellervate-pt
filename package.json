@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:reset": "npx --yes supabase@2.117.0 db reset",
-    "db:types": "npx --yes supabase@2.117.0 gen types typescript --local > lib/database.types.ts"
+    "db:types": "npx --yes supabase@2.117.0 gen types typescript --local > lib/database.types.ts",
+    "print-cookies": "tsx --conditions=react-server scripts/print-cookies.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",
@@ -30,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.26",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
