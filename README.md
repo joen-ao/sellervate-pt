@@ -70,3 +70,18 @@ password, see `.env.example`). To see the policies hold:
 ```
 psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f scripts/rls-proof.sql
 ```
+
+## Ingestion (spec P4)
+
+Leads import a helpdesk export at `/brands/<slug>/import` (sample:
+`docs/import-sample.csv`). A helpdesk can also push to the API with its source's
+bearer token. The seed gives Voltaire a Gorgias source with the **local-only**
+token `voltaire-dev-token` (only its sha256 is stored):
+
+```
+curl -s -X POST localhost:3000/api/ingest/00000000-0000-0000-0000-000000000611 \
+  -H "Authorization: Bearer voltaire-dev-token" -H 'content-type: application/json' \
+  --data @docs/ingest-sample.json      # {"inserted":3,"unmatched":1}, then 0/0
+```
+
+Field mappings for Gorgias and Zendesk: `docs/ingestion.md`.
