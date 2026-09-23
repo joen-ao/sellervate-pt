@@ -16,3 +16,54 @@ the *rows* inside a brand, and those stay behind the membership check either way
 The alternative (404 for both) hides existence, but it makes "you're not
 assigned to this brand" indistinguishable from a typo, for the user and for
 whoever is debugging a missing assignment.
+
+## RLS is a second gate, defined and proven, not yet on the request path
+
+Migration `0002_rls.sql` enables and forces RLS on all five tables. Identity is
+`app.current_user_id`, set with `set_config(..., true)` inside the same
+transaction as the query, then `set local role app_user`. Both die at commit, so
+a pooled connection cannot hand one user's identity to the next request; a
+session-level `set role` / `set` would. `scripts/rls-proof.sql` shows Dani sees
+only his 12 replies and 8 reviews, Marta 17 and 12, nobody sees Lume unless a
+member, and an unset user sees nothing.
+
+**Option A, a direct Postgres connection (`lib/supabase/rls.ts`, `asUser()`),
+not Option B (one RPC per read).** PostgREST gives every REST call its own
+transaction, so the setting cannot be shared through supabase-js. A would keep
+the DAL's queries in TypeScript next to the code that calls them; B would move
+every read into a SQL function and double the places a filter can drift. The
+connection logs in as `app_login`: no BYPASSRLS, NOINHERIT, so without
+`set local role app_user` it cannot read a single table — forgetting the switch
+fails loudly instead of quietly seeing everything.
+
+**Not on the request path yet.** The DAL files that would call `asUser()`
+(`replies`, `reviews`, `brand-stats`, `my-reviews`) were being written on four
+parallel branches when this landed, and `membership.ts` is a frozen contract.
+Rewiring them here meant guaranteed conflicts, so the switch from `admin` to
+`asUser()` is a follow-up once 03–06 merge. Until then the DAL is the only gate
+on the request path and RLS protects every other consumer: the anon key
+(which, before 0002, could read every table through PostgREST under Supabase's
+default grants), a future ingester or report job, a bug.
+
+What the DAL-bug experiment shows: `` asUser(dani, tx => tx`select count(*) from
+replies`) `` — no specialist filter at all, the bug the spec asks us to simulate
+— returns 12, Dani's own. That is what defence in depth means. The spec's
+version (`remove .eq('specialist_id', u.id)` in `/api/me/reviews`) waits for
+that route to exist and to run through `asUser()`.
+
+Choices beyond the spec's SQL, each deliberate:
+- `is_brand_member` and `current_app_role` are `security definer`. As invoker,
+  `brand_members`' policy would call `is_brand_member`, which reads
+  `brand_members`, which applies the policy — infinite recursion.
+- Policies are `to app_user`, and the helper functions are revoked from
+  `anon`/`authenticated`: nothing but the app role gets a policy or an RPC.
+- Grants are narrow: `select` on all, `insert` on `reviews`, and `update` on
+  `reviews(acknowledged_at)` only. The spec's ack policy alone would let a
+  specialist rewrite the score of a review of their own reply.
+- `reply_with_review` gets `security_invoker = true`. It is owned by `postgres`,
+  which is BYPASSRLS here, so without it the view would skip every policy. A
+  later `create or replace view` must restate the option.
+- No `grant app_user to authenticated` (the spec's workaround for running the
+  proof). Instead `postgres` gets `app_user` with `inherit false, set true`:
+  since PG16 a non-superuser cannot `set role` to a role it merely created, and
+  `inherit false` means postgres gains nothing from the membership.
