@@ -91,6 +91,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_sources: {
+        Row: {
+          brand_id: string
+          config: Json
+          created_at: string
+          id: string
+          kind: string
+          last_synced_at: string | null
+          name: string
+          token_hash: string | null
+        }
+        Insert: {
+          brand_id: string
+          config?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          last_synced_at?: string | null
+          name: string
+          token_hash?: string | null
+        }
+        Update: {
+          brand_id?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          last_synced_at?: string | null
+          name?: string
+          token_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_sources_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -123,6 +164,7 @@ export type Database = {
           customer_message: string
           external_id: string | null
           id: string
+          ingested_at: string | null
           reply_text: string
           sent_at: string
           source: string
@@ -135,6 +177,7 @@ export type Database = {
           customer_message: string
           external_id?: string | null
           id?: string
+          ingested_at?: string | null
           reply_text: string
           sent_at: string
           source?: string
@@ -147,6 +190,7 @@ export type Database = {
           customer_message?: string
           external_id?: string | null
           id?: string
+          ingested_at?: string | null
           reply_text?: string
           sent_at?: string
           source?: string
@@ -165,6 +209,41 @@ export type Database = {
             columns: ["specialist_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      replies_unmatched: {
+        Row: {
+          created_at: string
+          external_id: string
+          id: string
+          payload: Json
+          reason: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          id?: string
+          payload: Json
+          reason: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          id?: string
+          payload?: Json
+          reason?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replies_unmatched_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_sources"
             referencedColumns: ["id"]
           },
         ]
