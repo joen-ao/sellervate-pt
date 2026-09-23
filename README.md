@@ -59,3 +59,14 @@ Wall-clock parallelism is not claimed as hours worked.
 
 Agents run in parallel: _to be filled as the waves land._
 Attention time: _see `docs/sessions/time-log.md`._
+
+## RLS, the second gate
+
+Migration `0002_rls.sql` turns on row-level security for every table (spec 07a).
+`DATABASE_URL_APP` in `.env.local` must log in as `app_login`, not `postgres`:
+`postgresql://app_login:app_login_local@127.0.0.1:54322/postgres` (local-only
+password, see `.env.example`). To see the policies hold:
+
+```
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f scripts/rls-proof.sql
+```
