@@ -48,4 +48,5 @@ the time log.
 
 - Pages wrap DAL calls in `runPage()` (`lib/page.ts`); route handlers wrap them in `handle()` (`app/api/_lib/respond.ts`).
 - `reply_with_review` returns one row per *review*, not per reply. Every query on it filters by `reviewer_id` (PR #2).
+- Access checks (auth, role, membership: anything that can 307/403/404) run in the route's `layout.tsx`, `cache()`d so the page reuses them; `loading.tsx` sits below. A page-level `forbidden()` under `loading.tsx` returns HTTP 200. `/queue` reads `?brand=` via `middleware.ts` (DECISIONS).
 - Each branch passes a filled *copy* of `.github/PR_BODY.md` to `gh pr create`; the committed template stays blank (PR #1).
