@@ -1,0 +1,61 @@
+# Sellervate — reply review
+
+An internal tool for Sellervate team leads to record their judgement on support
+replies that specialists already sent to customers, and for specialists to read
+that judgement back. Not a helpdesk, not an inbox, no model scores anything.
+
+`specs/00-system-overview.md` is the whole picture; `specs/README.md` maps each
+branch to its spec. `CLAUDE.md` is what an agent session loads before it writes
+a line.
+
+## Clone to running
+
+```
+git clone
+supabase start
+supabase db reset
+cp .env.example .env.local
+npm i && npm run dev
+```
+
+Those are the steps from the definition of done in `specs/00-system-overview.md`,
+verbatim. Two things they assume, which are true of the machine this was built on
+but may not be true of yours:
+
+- `supabase` is the Supabase CLI on your `PATH` (`brew install supabase/tap/supabase`,
+  or `npx supabase@2.117.0 <command>` — it is deliberately not a dependency of this
+  package, see the bootstrap PR).
+- `cp .env.example .env.local` copies a file whose entries are all commented out,
+  so open `.env.local` afterwards and fill in the values `supabase start` printed.
+
+Then: switch to Marta → review a reply → open Voltaire → see the trend and the
+critical event → switch to Dani → see only his reviews → `curl` Lume as Dani → 403.
+Under ten minutes. **None of that walkthrough works yet** — this repo is at the
+bootstrap commit, the schema, the DAL and the screens land on the branches listed
+in `specs/README.md`.
+
+## Stack
+
+Scaffolded with **`create-next-app@15.5.26`** (`--typescript --tailwind --eslint
+--app --no-src-dir --turbopack --import-alias "@/*"`), then: daisyUI 5, zod,
+`@supabase/supabase-js`, `postgres`, `server-only`, and `supabase init`.
+
+Next 15.5.26 · React 19.1 · TypeScript strict · Tailwind 4 · daisyUI 5 ·
+Supabase Postgres 17 local.
+
+```
+npm run dev         # dev server on :3000
+npm run build       # production build
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+```
+
+## How this was built
+
+Several agent sessions in parallel, one branch and one PR each, coordinated by
+`specs/PARALLEL.md`. The hours reported for this exercise are **my own attention
+time** — reviewing, deciding, testing — tracked in `docs/sessions/time-log.md`.
+Wall-clock parallelism is not claimed as hours worked.
+
+Agents run in parallel: _to be filled as the waves land._
+Attention time: _see `docs/sessions/time-log.md`._
