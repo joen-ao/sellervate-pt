@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sellervate — reply review
 
-## Getting Started
+An internal tool for Sellervate team leads to record their judgement on support
+replies that specialists already sent to customers, and for specialists to read
+that judgement back. Not a helpdesk, not an inbox, no model scores anything.
 
-First, run the development server:
+`specs/00-system-overview.md` is the whole picture; `specs/README.md` maps each
+branch to its spec. `CLAUDE.md` is what an agent session loads before it writes
+a line.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Clone to running
+
+```
+git clone
+supabase start
+supabase db reset
+cp .env.example .env.local
+npm i && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Those are the steps from the definition of done in `specs/00-system-overview.md`,
+verbatim. Two things they assume, which are true of the machine this was built on
+but may not be true of yours:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `supabase` is the Supabase CLI on your `PATH` (`brew install supabase/tap/supabase`,
+  or `npx supabase@2.117.0 <command>` — it is deliberately not a dependency of this
+  package, see the bootstrap PR).
+- `cp .env.example .env.local` copies a file whose entries are all commented out,
+  so open `.env.local` afterwards and fill in the values `supabase start` printed.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then: switch to Marta → review a reply → open Voltaire → see the trend and the
+critical event → switch to Dani → see only his reviews → `curl` Lume as Dani → 403.
+Under ten minutes. **None of that walkthrough works yet** — this repo is at the
+bootstrap commit, the schema, the DAL and the screens land on the branches listed
+in `specs/README.md`.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+Scaffolded with **`create-next-app@15.5.26`** (`--typescript --tailwind --eslint
+--app --no-src-dir --turbopack --import-alias "@/*"`), then: daisyUI 5, zod,
+`@supabase/supabase-js`, `postgres`, `server-only`, and `supabase init`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Next 15.5.26 · React 19.1 · TypeScript strict · Tailwind 4 · daisyUI 5 ·
+Supabase Postgres 17 local.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+npm run dev         # dev server on :3000
+npm run build       # production build
+npm run typecheck   # tsc --noEmit
+npm run lint        # eslint
+```
 
-## Deploy on Vercel
+## How this was built
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Several agent sessions in parallel, one branch and one PR each, coordinated by
+`specs/PARALLEL.md`. The hours reported for this exercise are **my own attention
+time** — reviewing, deciding, testing — tracked in `docs/sessions/time-log.md`.
+Wall-clock parallelism is not claimed as hours worked.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Agents run in parallel: _to be filled as the waves land._
+Attention time: _see `docs/sessions/time-log.md`._
