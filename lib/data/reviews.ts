@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { requireRole } from '@/lib/current-user';
 import { assertBrandMember, getMemberBrandIds } from '@/lib/data/membership';
 import { ConflictError, NotFoundError } from '@/lib/errors';
@@ -14,7 +15,9 @@ export type ReplyForReview = {
   myReview: Pick<Review, 'id' | 'score' | 'severity' | 'categories' | 'comment' | 'created_at'> | null;
 };
 
-export async function getReplyForReview(replyId: string): Promise<ReplyForReview> {
+// cache(): the segment layout runs this for the access check (so 403/404 are real
+// HTTP statuses, decided before loading.tsx streams a 200) and the page reuses it.
+export const getReplyForReview = cache(async (replyId: string): Promise<ReplyForReview> => {
   const u = await requireRole('team_lead');
   // a malformed id would fail Postgres' uuid cast (500); it is simply "no such reply"
   if (!ReplyId.safeParse(replyId).success) throw new NotFoundError('Reply');
@@ -41,7 +44,7 @@ export async function getReplyForReview(replyId: string): Promise<ReplyForReview
     specialist: data.profiles,
     myReview: mine ?? null,
   };
-}
+});
 
 export async function createReview(input: ReviewInput): Promise<{ id: string; brandId: string }> {
   const u = await requireRole('team_lead');
