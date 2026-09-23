@@ -33,6 +33,7 @@ npm run dev         # dev server on :3000 (Turbopack)
 npm run build       # production build
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
+npm run print-cookies  # signed cookies for the seed users: eval "$(npm run -s print-cookies)"
 supabase start      # local Postgres + API; CLI is not in package.json, see README
 supabase db reset   # re-apply migrations, then load [db.seed] sql_paths
 ```
@@ -42,3 +43,9 @@ supabase db reset   # re-apply migrations, then load [db.seed] sql_paths
 `app/` routes · `components/` UI primitives · `lib/data/` the DAL · `lib/validation/` zod
 schemas · `supabase/migrations/` numbered SQL · `specs/` the contract · `docs/sessions/`
 the time log.
+
+## Conventions (spec 02 and PR review decisions)
+
+- Pages wrap DAL calls in `runPage()` (`lib/page.ts`); route handlers wrap them in `handle()` (`app/api/_lib/respond.ts`).
+- `reply_with_review` returns one row per *review*, not per reply. Every query on it filters by `reviewer_id` (PR #2).
+- Each branch passes a filled *copy* of `.github/PR_BODY.md` to `gh pr create`; the committed template stays blank (PR #1).
