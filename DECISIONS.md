@@ -67,3 +67,15 @@ Choices beyond the spec's SQL, each deliberate:
   proof). Instead `postgres` gets `app_user` with `inherit false, set true`:
   since PG16 a non-superuser cannot `set role` to a role it merely created, and
   `inherit false` means postgres gains nothing from the membership.
+
+## The specialist's 30-day summary is computed in JS
+
+`listMyReviews()` (`lib/data/my-reviews.ts`) fetches at most 100 reviews, already
+restricted in SQL to the specialist's own replies in their member brands, and
+computes count / average / critical over the last 30 days from those rows. That
+is a deliberate exception to "aggregate in SQL": the rows are already isolated,
+the set is tiny, and it saves a second query or an RPC (which would need a
+migration this branch does not have).
+
+The cost: a specialist with more than 100 reviews in 30 days would see an
+undercount. Nobody is near that; if they get there, it becomes a SQL aggregate.
