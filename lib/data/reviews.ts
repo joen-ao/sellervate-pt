@@ -1,7 +1,8 @@
 import 'server-only';
 import { cache } from 'react';
 import { requireRole } from '@/lib/current-user';
-import { assertBrandMember, getMemberBrandIds } from '@/lib/data/membership';
+import { assertBrandMember } from '@/lib/data/membership';
+import { nextUnreviewedReplyId as nextInQueueOrder } from '@/lib/data/replies';
 import { ConflictError, NotFoundError } from '@/lib/errors';
 import { admin } from '@/lib/supabase/admin';
 import type { Brand, Profile, Reply, Review } from '@/lib/types';
@@ -63,27 +64,16 @@ export async function createReview(input: ReviewInput): Promise<{ id: string; br
   return { id: data.id, brandId: reply.brand_id };
 }
 
-// "Save and next": the newest reply the current lead has not reviewed, preferring
-// the brand just reviewed (same guidelines on screen), then any member brand.
+// "Save and next" follows the queue's order, oldest unreviewed first, by reusing
+// the queue's own query (replies.ts). It prefers the brand just reviewed (same
+// guidelines on screen), then any member brand.
 export async function nextUnreviewedReplyId(preferBrandId?: string): Promise<string | null> {
-  const u = await requireRole('team_lead');
-  const brandIds = await getMemberBrandIds(u.id);
-  if (brandIds.length === 0) return null;
-
-  const { data: mine, error: mineError } = await admin.from('reviews')
-    .select('reply_id').eq('reviewer_id', u.id);
-  if (mineError) throw mineError;
-  const reviewed = mine.map(r => r.reply_id);
-
-  const scopes = preferBrandId && brandIds.includes(preferBrandId)
-    ? [[preferBrandId], brandIds] : [brandIds];
-  for (const ids of scopes) {
-    let q = admin.from('replies').select('id').in('brand_id', ids)
-      .order('sent_at', { ascending: false }).limit(1);
-    if (reviewed.length) q = q.not('id', 'in', `(${reviewed.join(',')})`);
-    const { data, error } = await q;
+  await requireRole('team_lead');
+  if (preferBrandId) {
+    const { data, error } = await admin.from('brands').select('slug').eq('id', preferBrandId).maybeSingle();
     if (error) throw error;
-    if (data[0]) return data[0].id;
+    const inBrand = data && await nextInQueueOrder(data.slug); // re-checks membership
+    if (inBrand) return inBrand;
   }
-  return null;
+  return nextInQueueOrder();
 }
