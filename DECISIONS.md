@@ -79,3 +79,31 @@ migration this branch does not have).
 
 The cost: a specialist with more than 100 reviews in 30 days would see an
 undercount. Nobody is near that; if they get there, it becomes a SQL aggregate.
+
+## The client report (P5) computes in one SQL function, as invoker
+
+`brand_report(brand, from, to)` (migration 0007) returns only aggregates — no
+reviewer, specialist, reply id or comment — and the DAL parses it with a
+*strict* zod object, so an extra key fails the request instead of reaching the
+page. It is `security invoker`, unlike 0002's helpers: it does not read
+`brand_members` itself, so there is no policy recursion to break, and as invoker
+an `app_user` caller only aggregates the rows RLS shows it (Marta asking for
+Lume gets `n = 0`). As definer it would hand any brand's numbers to anyone with
+execute. Execute is revoked from `anon`/`authenticated`. The app still calls it
+as `service_role`, so the DAL checks lead + membership first.
+
+Changes to the spec's SQL, each deliberate:
+- The previous period is the same length as the current one. The spec's
+  `p_from - (p_to - p_from)` is one day shorter, because `[p_from, p_to]` is inclusive.
+- "Top three things we improved" compares each category's *share* of reviews,
+  not its raw count. A quieter period would otherwise read as improvement on
+  every category — a claim we would be making to the client.
+- `limit 3` sits in a subquery; in the spec it applied to the single aggregated
+  row, so it never limited anything (checked: it returns all five of five).
+- Weeks with no reviews are emitted (`generate_series`) so the chart shows gaps
+  instead of hiding them; bucketing is explicit UTC.
+
+A note is keyed by the exact period, as specified. The default period is "the
+last 90 days", so it moves every day; without help a note written today would be
+gone tomorrow. When there is no note for the exact period, the latest non-empty
+note of the brand pre-fills the form (and prints), marked as carried over.
