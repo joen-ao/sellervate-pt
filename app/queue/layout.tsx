@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/current-user';
 import { assertQueueAccess } from '@/lib/data/replies';
 import { runPage } from '@/lib/page';
-import { SEARCH_HEADER } from '@/middleware';
+import { QUEUE_SEARCH_HEADER } from '@/lib/queue-search-header';
 
 // The access check lives here, above loading.tsx's Suspense boundary, so the
 // statuses are real: 307 for no user / specialist, 403 for ?brand= you don't
@@ -17,7 +17,7 @@ export default async function QueueLayout({ children }: { children: React.ReactN
   if (u.role === 'specialist') redirect('/me');
 
   // Same rule as the page: exactly one non-empty ?brand= filters, anything else is "all brands".
-  const all = new URLSearchParams((await headers()).get(SEARCH_HEADER) ?? '').getAll('brand');
+  const all = new URLSearchParams((await headers()).get(QUEUE_SEARCH_HEADER) ?? '').getAll('brand');
   const brand = all.length === 1 && all[0] ? all[0] : undefined;
   await runPage(() => assertQueueAccess(brand));
   return children;
