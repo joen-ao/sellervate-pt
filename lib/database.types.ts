@@ -275,7 +275,13 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      current_app_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      current_app_user_id: { Args: never; Returns: string }
+      is_brand_member: { Args: { p_brand_id: string }; Returns: boolean }
+      set_app_user: { Args: { p_user_id: string }; Returns: undefined }
     }
     Enums: {
       failure_category:
