@@ -149,3 +149,31 @@ A note is keyed by the exact period, as specified. The default period is "the
 last 90 days", so it moves every day; without help a note written today would be
 gone tomorrow. When there is no note for the exact period, the latest non-empty
 note of the brand pre-fills the form (and prints), marked as carried over.
+
+## Ingestion has a machine principal: a bearer token per source
+
+`POST /api/ingest/[sourceId]` is the first caller that is not a person. It gets
+its own identity, a bearer token bound to one `ingest_sources` row, and never
+touches `getCurrentUser()`: no cookie is read on that path, and a token cannot
+act as a user or reach another source. Only the token's sha256 is stored; the
+DAL (`lib/data/ingest.ts`) hashes what arrives and compares the two digests with
+`timingSafeEqual`. The check lives in the DAL, not the route, so no other server
+code can call `ingestBatch` "as a token" without holding one. `app_user` is not
+granted the `token_hash` column.
+
+What the token authorises is decided by the source row, not the payload:
+`brand_id` comes from the source, so a Voltaire token can only ever write
+Voltaire replies, whatever the body says. `csv` sources have no token and are
+UI-only (a lead of the brand, through the cookie); API sources refuse the UI.
+
+Re-sends are idempotent: upsert on `(source, external_id)` with
+`ignoreDuplicates`, so a row already there — and any review on it — is never
+overwritten. Unknown specialist emails go to `replies_unmatched`, never dropped.
+
+Deliberately not enforced: that the specialist is a member of the source's
+brand. A helpdesk can show a reply by someone not yet in `brand_members`
+(onboarding lag, a cover shift). The reply lands in the brand, the lead sees it
+in the queue, and the gap is visible rather than silently discarded. The cost:
+that specialist does not see the reply or its review under `/me` until someone
+adds the membership, because what a specialist sees is still gated by
+membership.

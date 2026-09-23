@@ -1,0 +1,12 @@
+external_id,specialist_email,customer_message,reply_text,sent_at,channel
+kc-5001,dani@sellervate.test,"Need 400 of the 30x20x15 double-wall boxes, how soon?","400 x BX-302015-DW confirmed. Lead time 3 working days per the table. Pallet minimum is 480; 80 more ships free on the same pallet.",2026-09-15T08:10:00Z,email
+kc-5002,iker@sellervate.test,Do you have kraft tape in 75mm?,"Yes: TP-75-KR, 36 rolls per case. Lead time 2 working days. How many cases?",2026-09-15T10:32:00Z,email
+kc-5003,dani@sellervate.test,"Order 88213 arrived with 2 crushed cartons.","Sorry. Order 88213: 2 x BX-402030 replaced, ships today, lead time 1 day. No need to return the damaged ones.",2026-09-16T09:05:00Z,shopify
+kc-5004,iker@sellervate.test,Can you do 1000 mailers by Friday?,"1000 x ML-A4-WH confirmed. Lead time in the table is 5 working days, so Friday is not possible; earliest is next Wednesday.",2026-09-16T14:47:00Z,email
+kc-5005,dani@sellervate.test,What's the pallet minimum on void fill?,"VF-PAPER-50: pallet minimum 60 bales. Lead time 4 working days.",2026-09-17T07:58:00Z,amazon
+kc-5006,iker@sellervate.test,"Price for 5000 poly bags, 25x35?","5000 x PB-2535 confirmed. Quote sent to your account email. Lead time 3 working days.",2026-09-17T12:20:00Z,email
+kc-5007,dani@sellervate.test,Is the stretch wrap recyclable?,"SW-500-23 is LDPE 4, recyclable where film is collected. Lead time 2 working days.",2026-09-18T09:41:00Z,walmart
+kc-5008,iker@sellervate.test,"We ordered 470 boxes, is that a full pallet?","470 x BX-302015-DW. Pallet minimum is 480, so 10 more fills it and ships free. Lead time 3 working days.",2026-09-18T16:03:00Z,email
+kc-5009,dani@sellervate.test,Can I change the delivery address on order 88390?,"Order 88390: address updated to the one in your message. Ships tomorrow, lead time 2 working days.",2026-09-19T08:25:00Z,shopify
+kc-5010,iker@sellervate.test,Do you sell fragile labels?,"LB-FRAG-RL, 500 per roll. Lead time 1 working day. SKU and quantity?",2026-09-19T11:12:00Z,
+kc-5011,marta.old@kraftco.test,Cancel order 88402 please.,"Cancelled. Refund in 3-5 days.",2026-09-20T10:00:00Z,email

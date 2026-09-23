@@ -1,0 +1,34 @@
+[
+  {
+    "external_id": "gorgias-88101",
+    "specialist_email": "dani@sellervate.test",
+    "customer_message": "My V2 shows error E07 after about 40 minutes of riding. 1,850 km on it. Is this the controller?",
+    "reply_text": "Thanks for the code and the mileage. E07 is the controller overheating, not a fault in itself. Let it cool for 15 minutes and check the vent under the deck is clear; the help article 'E07 - controller temperature' has photos. If it returns within 10 minutes of riding, reply here and we'll look at your order history for the next step.",
+    "sent_at": "2026-09-21T09:14:00Z",
+    "channel": "shopify"
+  },
+  {
+    "external_id": "gorgias-88102",
+    "specialist_email": "dani@sellervate.test",
+    "customer_message": "Can I ride the V1 in the rain?",
+    "reply_text": "The V1 is rated IPX4: light rain and splashes are fine, standing water and heavy rain are not. Dry the charging port before you plug in. The help article 'Riding in wet weather' covers the details.",
+    "sent_at": "2026-09-21T11:02:00Z",
+    "channel": "email"
+  },
+  {
+    "external_id": "gorgias-88103",
+    "specialist_email": "iker@sellervate.test",
+    "customer_message": "The brake lever on my V2 Pro feels loose.",
+    "reply_text": "A loose lever is usually the cable tension. Turn the barrel adjuster at the lever two turns counter-clockwise and test at walking speed. The help article 'Adjusting the brakes' shows where it is. Tell me the mileage if it is still loose.",
+    "sent_at": "2026-09-22T08:40:00Z",
+    "channel": "amazon"
+  },
+  {
+    "external_id": "gorgias-88104",
+    "specialist_email": "temp.agent@outsourcer.test",
+    "customer_message": "Where is my order? It has been two weeks.",
+    "reply_text": "Sorry for the wait! Your order is on its way and should arrive any day now.",
+    "sent_at": "2026-09-22T15:20:00Z",
+    "channel": "email"
+  }
+]
