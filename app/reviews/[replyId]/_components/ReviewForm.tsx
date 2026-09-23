@@ -2,7 +2,7 @@
 import { startTransition, useActionState, useEffect, useState } from 'react';
 import { CATEGORY_LABEL, FAILURE_CATEGORIES, type FailureCategory, type Severity } from '@/lib/types';
 import { submitReview } from '../actions';
-import { ErrorCard } from './ErrorCard';
+import { ErrorCard } from '@/components/ErrorCard';
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 const SEVERITIES: { value: Severity; label: string }[] = [
@@ -12,7 +12,7 @@ const SEVERITIES: { value: Severity; label: string }[] = [
 ];
 
 const FieldError = ({ errors }: { errors?: string[] }) =>
-  errors?.length ? <p className="text-sm text-error">{errors[0]}</p> : null;
+  errors?.length ? <p className="text-sm text-warning">{errors[0]}</p> : null;
 
 // Inputs are controlled, so a validation error or a conflict never loses what was typed.
 // Submitting goes through onSubmit + startTransition rather than letting <form action>
@@ -106,7 +106,7 @@ export function ReviewForm({ replyId, specialistFirstName }: { replyId: string; 
           <FieldError errors={errors?.comment} />
         </label>
 
-        {state?.formError && <ErrorCard compact message={state.formError} />}
+        {state?.formError && <ErrorCard compact title={state.formError} />}
         <Buttons pending={pending} />
       </div>
     </form>

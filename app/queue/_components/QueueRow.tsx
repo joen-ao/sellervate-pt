@@ -1,10 +1,8 @@
 import Link from 'next/link';
-import { Pill } from '@/components/Pill';
+import { Pill, scoreTone } from '@/components/Pill';
 import { SeverityDot } from '@/components/SeverityDot';
 import type { QueueItem } from '@/lib/data/replies';
 import { relativeTime } from '@/lib/format';
-
-const scoreTone = (s: number) => (s <= 2 ? 'error' : s === 3 ? 'warning' : 'success');
 
 // h-16 is shared with the skeleton row in QueueSkeleton; change both together.
 export const ROW_HEIGHT = 'h-16';

@@ -9,3 +9,6 @@ const TONE: Record<Tone, string> = {
 export function Pill({ children, tone = 'ghost', title }: { children: React.ReactNode; tone?: Tone; title?: string }) {
   return <span title={title} className={`badge badge-sm whitespace-nowrap ${TONE[tone]}`}>{children}</span>;
 }
+
+// Score colour: 4–5 good, 1–3 needs work. Never red — red is reserved for a critical error.
+export const scoreTone = (score: number): Tone => (score >= 4 ? 'success' : 'warning');
