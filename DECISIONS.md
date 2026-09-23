@@ -80,6 +80,76 @@ migration this branch does not have).
 The cost: a specialist with more than 100 reviews in 30 days would see an
 undercount. Nobody is near that; if they get there, it becomes a SQL aggregate.
 
+## Access checks live in the segment layout, above `loading.tsx`
+
+One pattern for every route. The check that can say 307/403/404 runs in the
+route's `layout.tsx`; `loading.tsx` sits below it; the page renders the data.
+
+Why: in Next 15.5, `loading.tsx` wraps the page in a Suspense boundary, so the
+skeleton streams with a 200 before the page runs. A `forbidden()` thrown in the
+page then renders the 403 screen with an HTTP 200. A layout renders before that
+boundary, so its `forbidden()` / `notFound()` / `redirect()` set the real
+status. The checks are `cache()`d (`getReplyForReview`, `assertBrandStatsAccess`,
+`assertQueueAccess` → `scopeBrandIds`), so the page reuses the answer instead
+of querying twice. The page still goes through the same DAL call, so a page
+reached without its layout re-rendering (a client navigation that only changes
+the query string) is still checked, it just can't set an HTTP status there,
+and there it doesn't matter.
+
+`/queue` was the exception (it had no `loading.tsx`, and streamed behind its
+own `<Suspense>`), because its check depends on `?brand=` and a layout gets
+`params`, not `searchParams`. `middleware.ts` now copies the query string into a
+request header (`x-queue-search`, always overwritten) for `/queue` only, and
+`app/queue/layout.tsx` reads `?brand=` from it. That header names a brand, not
+a person, and the brand is resolved through membership like any other input.
+
+Rejected: dropping `loading.tsx` everywhere and streaming behind an explicit
+`<Suspense>` after a check in the page. It also gives real statuses, but
+contradicts the spec's per-route `loading.tsx`, shows nothing on a client
+navigation until the check returns, and for `/reviews/[id]` the check *is* the
+data fetch, so there'd be nothing left to stream.
+
+`curl -w "%{http_code}"` for every forbidden / not-found case on every route
+is in the `feat/ui-states` PR.
+
+## A database outage is an error screen, not "signed out"
+
+`getCurrentUser()` used to ignore the query error and return `null`, so with
+the database down every page redirected to "Pick who you are". It now throws on
+a database error (same signature; `null` still means no valid cookie or no such
+profile). The root layout catches its own failure to load the switcher and
+still renders the page, so the route's `error.tsx` (or `app/error.tsx`, when the
+failing call is in a segment layout) shows a retry. `app/global-error.tsx` is
+the backstop if the root layout throws anyway.
+
+## The client report (P5) computes in one SQL function, as invoker
+
+`brand_report(brand, from, to)` (migration 0007) returns only aggregates — no
+reviewer, specialist, reply id or comment — and the DAL parses it with a
+*strict* zod object, so an extra key fails the request instead of reaching the
+page. It is `security invoker`, unlike 0002's helpers: it does not read
+`brand_members` itself, so there is no policy recursion to break, and as invoker
+an `app_user` caller only aggregates the rows RLS shows it (Marta asking for
+Lume gets `n = 0`). As definer it would hand any brand's numbers to anyone with
+execute. Execute is revoked from `anon`/`authenticated`. The app still calls it
+as `service_role`, so the DAL checks lead + membership first.
+
+Changes to the spec's SQL, each deliberate:
+- The previous period is the same length as the current one. The spec's
+  `p_from - (p_to - p_from)` is one day shorter, because `[p_from, p_to]` is inclusive.
+- "Top three things we improved" compares each category's *share* of reviews,
+  not its raw count. A quieter period would otherwise read as improvement on
+  every category — a claim we would be making to the client.
+- `limit 3` sits in a subquery; in the spec it applied to the single aggregated
+  row, so it never limited anything (checked: it returns all five of five).
+- Weeks with no reviews are emitted (`generate_series`) so the chart shows gaps
+  instead of hiding them; bucketing is explicit UTC.
+
+A note is keyed by the exact period, as specified. The default period is "the
+last 90 days", so it moves every day; without help a note written today would be
+gone tomorrow. When there is no note for the exact period, the latest non-empty
+note of the brand pre-fills the form (and prints), marked as carried over.
+
 ## Ingestion has a machine principal: a bearer token per source
 
 `POST /api/ingest/[sourceId]` is the first caller that is not a person. It gets

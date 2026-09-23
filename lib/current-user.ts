@@ -10,12 +10,15 @@ export { COOKIE, signUserId } from '@/lib/session';
 
 export type CurrentUser = { id: string; fullName: string; role: UserRole };
 
-// cache(): one DB hit per request even if called from layout + page + actions
+// cache(): one DB hit per request even if called from layout + page + actions.
+// null means "nobody signed in"; a database error throws, so an outage reaches
+// an error boundary instead of looking like a signed-out user.
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const id = verifyUserId((await cookies()).get(COOKIE)?.value);
   if (!id) return null;
-  const { data } = await admin.from('profiles')
+  const { data, error } = await admin.from('profiles')
     .select('id, full_name, role').eq('id', id).maybeSingle();
+  if (error) throw error;
   return data ? { id: data.id, fullName: data.full_name, role: data.role } : null;
 });
 

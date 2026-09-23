@@ -67,6 +67,48 @@ export type Database = {
           },
         ]
       }
+      brand_report_notes: {
+        Row: {
+          brand_id: string
+          period_end: string
+          period_start: string
+          updated_at: string
+          updated_by: string
+          working_on: string
+        }
+        Insert: {
+          brand_id: string
+          period_end: string
+          period_start: string
+          updated_at?: string
+          updated_by: string
+          working_on?: string
+        }
+        Update: {
+          brand_id?: string
+          period_end?: string
+          period_start?: string
+          updated_at?: string
+          updated_by?: string
+          working_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_report_notes_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_report_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           created_at: string
@@ -354,6 +396,10 @@ export type Database = {
       }
     }
     Functions: {
+      brand_report: {
+        Args: { p_brand_id: string; p_from: string; p_to: string }
+        Returns: Json
+      }
       current_app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]

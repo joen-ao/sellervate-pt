@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/EmptyState';
 import { listMyReviews } from '@/lib/data/my-reviews';
 import { runPage } from '@/lib/page';
 import { MyReviewCard } from './_components/MyReviewCard';
@@ -19,12 +20,8 @@ export default async function MePage() {
       <MySummary summary={summary} />
 
       {items.length === 0 ? (
-        <section className="rounded-box border border-dashed border-base-300 p-10 text-center">
-          <h2 className="font-medium">No feedback yet</h2>
-          <p className="mt-1 text-base-content/70">
-            When your team lead reviews one of your replies, it shows up here.
-          </p>
-        </section>
+        <EmptyState title="No feedback yet"
+          body="When your team lead reviews one of your replies, it shows up here. Nothing to do until then." />
       ) : (
         <section aria-label="Reviews, newest first" className="flex flex-col gap-4">
           {items.map(r => <MyReviewCard key={r.id} review={r} />)}

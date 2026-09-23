@@ -6,7 +6,7 @@ import { TrendChart } from './_components/TrendChart';
 import { CategoryList } from './_components/CategoryList';
 import { CriticalList } from './_components/CriticalList';
 import { SpecialistTable } from './_components/SpecialistTable';
-import { EmptyState } from './_components/EmptyState';
+import { EmptyState } from '@/components/EmptyState';
 
 export default async function BrandPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -24,7 +24,8 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
 
       {stats.current.n === 0 ? (
         <EmptyState title={`No reviews for ${brand.name} in the last ${WINDOW_DAYS} days.`}
-          body="Reviews from the queue show up here." />
+          body="Reviews from the queue show up here."
+          action={<Link href={`/queue?brand=${brand.slug}`} className="btn btn-sm">Review {brand.name} replies</Link>} />
       ) : (
         <>
           <StatCards current={stats.current} previous={stats.previous} />

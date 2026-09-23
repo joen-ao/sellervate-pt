@@ -66,14 +66,17 @@ type EmptyProps = { brands: QueueBrand[]; brandName?: string; status: QueueStatu
 
 function QueueEmpty({ brands, brandName, status, page }: EmptyProps) {
   if (brands.length === 0) {
-    return <EmptyState title="You don't cover any brands yet." body="Once you are added to a brand, its replies show up here." />;
+    return <EmptyState title="You don't cover any brands yet." body="Ask whoever assigns brands to add you to one; its replies show up here." />;
   }
   if (page > 1) {
     return <EmptyState title="No more replies on this page." action={<Link className="btn btn-sm" href={queueHref({ status })}>Back to page 1</Link>} />;
   }
   if (brandName) {
     const kind = status === 'all' ? '' : `${status} `;
-    return <EmptyState title={`No ${kind}replies from ${brandName} in the last ${QUEUE_WINDOW_HOURS} h.`} />;
+    return (
+      <EmptyState title={`No ${kind}replies from ${brandName} in the last ${QUEUE_WINDOW_HOURS} h.`}
+        action={<Link className="btn btn-sm" href={queueHref({ status })}>See all brands</Link>} />
+    );
   }
   if (status === 'unreviewed') {
     return (
@@ -84,5 +87,9 @@ function QueueEmpty({ brands, brandName, status, page }: EmptyProps) {
       />
     );
   }
-  return <EmptyState title={`No ${status === 'all' ? '' : 'reviewed '}replies in the last ${QUEUE_WINDOW_HOURS} h.`} />;
+  return (
+    <EmptyState title={`No ${status === 'all' ? '' : 'reviewed '}replies in the last ${QUEUE_WINDOW_HOURS} h.`}
+      body={`The list shows the last ${QUEUE_WINDOW_HOURS} h; Review next also reaches older unreviewed replies.`}
+      action={<Link className="btn btn-sm" href={queueHref({ status: 'unreviewed' })}>Back to unreviewed</Link>} />
+  );
 }
