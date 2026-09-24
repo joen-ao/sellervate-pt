@@ -12,8 +12,8 @@ export function QueueRow({ item }: { item: QueueItem }) {
   return (
     <li>
       <Link href={`/reviews/${item.id}`}
-        className={`${ROW_HEIGHT} grid grid-cols-[9rem_1fr_auto] items-center gap-4 overflow-hidden px-4 text-sm hover:bg-base-200`}>
-        <div className="min-w-0">
+        className={`${ROW_HEIGHT} grid grid-cols-[1fr_auto] items-center sm:grid-cols-[9rem_1fr_auto] gap-4 overflow-hidden px-4 text-sm hover:bg-base-200`}>
+        <div className="hidden min-w-0 sm:block">
           <div className="flex items-center gap-2">
             <Pill tone="neutral">{item.brandName}</Pill>
           </div>
@@ -22,7 +22,11 @@ export function QueueRow({ item }: { item: QueueItem }) {
           </p>
         </div>
         <div className="min-w-0">
-          <p className="truncate text-base-content/60">{item.customerSnippet}</p>
+          <p className="truncate text-base-content/60">
+            {/* on small screens the brand column folds into the first line, keeping the row two lines tall */}
+            <span className="font-medium text-base-content sm:hidden">{item.brandName} · </span>
+            {item.customerSnippet}
+          </p>
           <p className="truncate">{item.replySnippet}</p>
         </div>
         <div className="flex items-center gap-2">
