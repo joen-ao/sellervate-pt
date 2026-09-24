@@ -1,5 +1,5 @@
-/* Client report (P5). A light, ink-friendly variant of the tokens, forced on this
-   route whatever the app theme is, so screen preview and paper match. Only the
+/* Client report (P5). A light, ink-friendly variant of the tokens, set on the
+   report sheet only (R7): the app around it stays dark, sheet and paper match. Only the
    daisyUI token values live here; components use the tokens, never colours. */
 [data-theme="sellervate-print"] {
   color-scheme: light;
@@ -42,7 +42,12 @@
      inside it — the user switcher, dev overlays, any app chrome around it. */
   body :not(:has(.report-root)):not(.report-root):not(.report-root *) { display: none !important; }
 
-  .report-root { min-height: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* The dark stage around the sheet (and the shell containing it) prints as plain paper. */
+  body :has(.report-root) { background: white !important; padding: 0 !important; min-height: 0 !important; }
+  .report-root {
+    min-height: 0; max-width: none; border-radius: 0; box-shadow: none;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
   .report-root main { max-width: none; padding: 0; gap: 1.25rem; }
   .report-root section, .report-root .rounded-box { break-inside: avoid; }
 }

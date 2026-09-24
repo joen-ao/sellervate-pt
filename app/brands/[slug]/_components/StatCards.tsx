@@ -1,17 +1,20 @@
+import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import type { Period } from '@/lib/data/brand-stats';
 
 // Red only for more criticals (DESIGN.md); a falling average is a warning, not an alarm.
 type Tone = 'good' | 'bad' | 'critical' | 'neutral';
 const TONE: Record<Tone, string> = {
-  good: 'text-success', bad: 'text-warning', critical: 'text-error', neutral: 'text-base-content/60',
+  good: 'text-success', bad: 'text-warning', critical: 'text-error', neutral: 'text-base-content/50',
 };
+const ICON = { size: 14, strokeWidth: 1.75, 'aria-hidden': true } as const;
 
 function Delta({ d, digits = 0, tone }: { d: number | null; digits?: number; tone: Tone }) {
-  if (d === null) return <span className="text-base-content/60">no prior data</span>;
-  if (d === 0) return <span className="text-base-content/60">— same as before</span>;
+  if (d === null) return <span className="text-base-content/45">no prior data</span>;
+  if (d === 0) return <span className="flex items-center gap-1 text-base-content/50"><Minus {...ICON} /> same as before</span>;
   return (
-    <span className={TONE[tone]}>
-      {d > 0 ? '▲' : '▼'} {Math.abs(d).toFixed(digits)} vs prior 30 d
+    <span className={`flex items-center gap-1 ${TONE[tone]}`}>
+      {d > 0 ? <TrendingUp {...ICON} /> : <TrendingDown {...ICON} />}
+      {d > 0 ? '+' : '−'}{Math.abs(d).toFixed(digits)} vs prior 30 d
     </span>
   );
 }
@@ -43,12 +46,12 @@ function Card({ label, value, suffix, valueClass, children }: {
   label: string; value: string; suffix?: string; valueClass?: string; children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-box border border-base-300 p-4">
-      <p className="text-sm text-base-content/60">{label}</p>
-      <p className={`text-2xl font-semibold tabular-nums ${valueClass ?? ''}`}>
-        {value}{suffix && <span className="ml-1 text-base font-normal text-base-content/50">{suffix}</span>}
+    <div className="flex flex-col gap-1 rounded-box bg-base-200 px-5 py-4">
+      <p className="text-xs font-medium text-base-content/50">{label}</p>
+      <p className={`font-serif text-3xl font-medium tabular-nums ${valueClass ?? ''}`}>
+        {value}{suffix && <span className="ml-1 font-sans text-sm font-normal text-base-content/40">{suffix}</span>}
       </p>
-      <p className="mt-1 text-sm tabular-nums">{children}</p>
+      <div className="text-xs tabular-nums">{children}</div>
     </div>
   );
 }
