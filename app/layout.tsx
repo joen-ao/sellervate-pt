@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { unstable_rethrow } from "next/navigation";
+import { AppNav } from "@/components/AppNav";
 import { UserSwitcher } from "@/components/UserSwitcher";
 import { getCurrentUser, listSwitchableUsers } from "@/lib/current-user";
+import { listMemberBrands } from "@/lib/data/replies";
 import "./globals.css";
 
 const inter = Inter({
@@ -31,9 +33,11 @@ export default async function RootLayout({
     unstable_rethrow(e); // Next's own signals (dynamic usage, redirects) pass through
     console.error(e);
   }
+  const brands = await loadNavBrands(people);
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
+        {people && <AppNav user={people.current} brands={brands} />}
         {children}
         {people ? (
           <UserSwitcher users={people.users} current={people.current} />
@@ -50,4 +54,17 @@ export default async function RootLayout({
 async function loadPeople() {
   const [current, users] = await Promise.all([getCurrentUser(), listSwitchableUsers()]);
   return { current, users };
+}
+
+// Brands for the nav: leads only, through the DAL (membership-filtered, as the
+// user). Its own try, so losing it costs the brand links, not the switcher.
+async function loadNavBrands(people: Awaited<ReturnType<typeof loadPeople>> | null) {
+  if (people?.current?.role !== 'team_lead') return [];
+  try {
+    return await listMemberBrands();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error(e);
+    return [];
+  }
 }
