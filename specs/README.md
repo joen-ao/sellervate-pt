@@ -24,4 +24,11 @@ Structure of every feature spec:
 | plus/P4-helpdesk-ingestion.md | `feat/ingestion` | `0006` | 01 |
 | plus/P5-client-report.md | `feat/client-report` | `0007` | 05 |
 
+Two branches ran without a spec of their own, and it is worth saying which and why:
+
+| Branch | PR | Written against | Why no spec |
+|---|---|---|---|
+| `feat/navigation` | #14 | `DESIGN.md` ("Shell") | Every screen worked and none of them linked to each other. The brief calls three screens that do not connect a rough edge that is not acceptable, so this was a fix to a finished build, not a feature to specify. |
+| `fix/sidebar-counts` | #15 | — | A bug the shell introduced: the counters did not move after "Got it", Save or Import. Found by clicking through as Dani after #14 merged. |
+
 `PARALLEL.md` explains how branches run concurrently without stepping on each other. Spanish mirror in `es/`.
