@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { usePendingCount } from './PendingCounts';
 
 type Props = {
   href: string;
   icon?: React.ReactNode;
   count?: number;
   countLabel?: string;
+  // Lets a client action adjust this count before the server sends a new one.
+  countId?: string;
   // Other path prefixes that belong to this section (the review panel is part of the queue).
   also?: string[];
   exact?: boolean;
@@ -21,8 +24,9 @@ function closeDrawer() {
   if (toggle) toggle.checked = false;
 }
 
-export function SidebarLink({ href, icon, count, countLabel, also = [], exact, indent, children }: Props) {
+export function SidebarLink({ href, icon, count, countLabel, countId, also = [], exact, indent, children }: Props) {
   const path = usePathname();
+  const shown = usePendingCount(countId, count);
   const matches = (p: string) => (exact ? path === p : path === p || path.startsWith(`${p}/`));
   const active = matches(href) || also.some(matches);
 
@@ -41,8 +45,8 @@ export function SidebarLink({ href, icon, count, countLabel, also = [], exact, i
     >
       {icon && <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>{icon}</span>}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {count ? (
-        <span className="text-xs tabular-nums text-base-content/60" aria-label={countLabel}>{count}</span>
+      {shown ? (
+        <span className="text-xs tabular-nums text-base-content/60" aria-label={countLabel}>{shown}</span>
       ) : null}
     </Link>
   );

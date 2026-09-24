@@ -1,7 +1,9 @@
 'use client';
-import { startTransition, useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSetPendingCounts } from '@/components/shell/PendingCounts';
 import { CATEGORY_LABEL, FAILURE_CATEGORIES, type FailureCategory, type Severity } from '@/lib/types';
-import { submitReview } from '../actions';
+import { submitReview, type ActionState } from '../actions';
 import { ErrorCard } from '@/components/ErrorCard';
 
 const SCORES = [1, 2, 3, 4, 5] as const;
@@ -20,7 +22,15 @@ const FieldError = ({ errors }: { errors?: string[] }) =>
 // controlled radios in the DOM while the buttons still look selected, so a resubmit
 // would send no score. action={dispatch} stays for the no-JS path.
 export function ReviewForm({ replyId, specialistFirstName }: { replyId: string; specialistFirstName: string }) {
-  const [state, dispatch, pending] = useActionState(submitReview, null);
+  // action={dispatch} is the no-JS path. With JS, onSubmit calls the action itself
+  // so a plain Save can hand the sidebar its fresh counts the moment it returns.
+  const [actionState, dispatch, actionPending] = useActionState(submitReview, null);
+  const [jsState, setJsState] = useState<ActionState | null>(null);
+  const [jsPending, startSubmit] = useTransition();
+  const state = jsState ?? actionState;
+  const pending = actionPending || jsPending;
+  const router = useRouter();
+  const setCounts = useSetPendingCounts();
   const [score, setScore] = useState<number | null>(null);
   const [severity, setSeverity] = useState<Severity>('none');
   const [categories, setCategories] = useState<FailureCategory[]>([]);
@@ -42,7 +52,17 @@ export function ReviewForm({ replyId, specialistFirstName }: { replyId: string; 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
-    startTransition(() => dispatch(data));
+    startSubmit(async () => {
+      const result = await submitReview(state, data); // Save and next redirects from inside
+      if (result?.saved) {
+        setCounts(result.saved);
+        // A navigation, not refresh(): a new URL makes Next fetch the page, which
+        // now shows the read-only review. refresh() did not reliably swap it.
+        router.replace(`/reviews/${replyId}?saved=1`);
+        return;
+      }
+      setJsState(result);
+    });
   };
   const toggle = (c: FailureCategory) =>
     setCategories(cs => (cs.includes(c) ? cs.filter(x => x !== c) : [...cs, c]));

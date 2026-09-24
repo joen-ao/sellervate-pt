@@ -2,10 +2,14 @@
 import { revalidatePath } from 'next/cache';
 import { forbidden, notFound } from 'next/navigation';
 import { getCsvImportSource, ingestBatch, type IngestResult } from '@/lib/data/ingest';
+import { getPendingCounts } from '@/lib/data/shell';
 import { ForbiddenError, NotFoundError } from '@/lib/errors';
 import { IngestBatch } from '@/lib/validation/ingest';
 
-export type ImportState = { result?: IngestResult; fileName?: string; error?: string } | null;
+export type ImportState = {
+  result?: IngestResult; fileName?: string; error?: string;
+  pending?: Record<string, number>; // the sidebar's fresh counts, applied by ImportForm
+} | null;
 
 const MAX_BYTES = 2_000_000;
 const COLUMNS = ['external_id', 'specialist_email', 'customer_message', 'reply_text', 'sent_at', 'channel'] as const;
@@ -41,9 +45,8 @@ export async function importCsv(slug: string, _prev: ImportState, formData: Form
     }
 
     const result = await ingestBatch(source.id, batch.data, { kind: 'user' });
-    revalidatePath('/queue');
-    revalidatePath(`/brands/${slug}`);
-    return { result, fileName: file.name };
+    revalidatePath('/', 'layout');
+    return { result, fileName: file.name, pending: await getPendingCounts() };
   } catch (e: unknown) {
     if (e instanceof ForbiddenError) forbidden();
     if (e instanceof NotFoundError) notFound();

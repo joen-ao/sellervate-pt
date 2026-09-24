@@ -5,6 +5,7 @@ import {
 import type { CurrentUser } from '@/lib/current-user';
 import type { ShellBrand } from '@/lib/data/shell';
 import { BrandNav } from './BrandNav';
+import { PendingCountsProvider } from './PendingCounts';
 import { SidebarLink } from './SidebarLink';
 
 const ICON = { size: 16, strokeWidth: 1.75 } as const;
@@ -17,23 +18,25 @@ export function AppShell({ user, brands, children }: {
   user: CurrentUser; brands: ShellBrand[]; children: React.ReactNode;
 }) {
   return (
-    <div className="drawer lg:drawer-open">
-      <input id="app-nav" type="checkbox" className="drawer-toggle" />
-      <div className="drawer-content flex min-h-screen min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-base-300 bg-base-100 px-3 lg:hidden">
-          <label htmlFor="app-nav" className="btn btn-square btn-ghost btn-sm" aria-label="Open navigation">
-            <Menu {...ICON} />
-          </label>
-          <Link href="/" className="text-sm font-semibold">Sellervate QA</Link>
-          <span className="ml-auto truncate text-sm text-base-content/60">{user.fullName}</span>
-        </header>
-        {children}
+    <PendingCountsProvider>
+      <div className="drawer lg:drawer-open">
+        <input id="app-nav" type="checkbox" className="drawer-toggle" />
+        <div className="drawer-content flex min-h-screen min-w-0 flex-col">
+          <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-base-300 bg-base-100 px-3 lg:hidden">
+            <label htmlFor="app-nav" className="btn btn-square btn-ghost btn-sm" aria-label="Open navigation">
+              <Menu {...ICON} />
+            </label>
+            <Link href="/" className="text-sm font-semibold">Sellervate QA</Link>
+            <span className="ml-auto truncate text-sm text-base-content/60">{user.fullName}</span>
+          </header>
+          {children}
+        </div>
+        <div className="drawer-side z-40">
+          <label htmlFor="app-nav" className="drawer-overlay" aria-label="Close navigation" />
+          <Sidebar user={user} brands={brands} />
+        </div>
       </div>
-      <div className="drawer-side z-40">
-        <label htmlFor="app-nav" className="drawer-overlay" aria-label="Close navigation" />
-        <Sidebar user={user} brands={brands} />
-      </div>
-    </div>
+    </PendingCountsProvider>
   );
 }
 
@@ -63,14 +66,14 @@ function Sidebar({ user, brands }: { user: CurrentUser; brands: ShellBrand[] }) 
           {lead ? (
             <li>
               <SidebarLink href="/queue" also={['/reviews']} icon={<ListChecks {...ICON} />}
-                count={pending} countLabel={`${pending} unreviewed`}>
+                count={pending} countId="total" countLabel={`${pending} unreviewed`}>
                 Review queue
               </SidebarLink>
             </li>
           ) : (
             <li>
               <SidebarLink href="/me" icon={<MessageSquareText {...ICON} />}
-                count={pending} countLabel={`${pending} unread`}>
+                count={pending} countId="total" countLabel={`${pending} unread`}>
                 My feedback
               </SidebarLink>
             </li>

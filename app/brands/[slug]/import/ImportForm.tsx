@@ -1,9 +1,13 @@
 'use client';
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useSetPendingCounts } from '@/components/shell/PendingCounts';
 import { importCsv, type ImportState } from './actions';
 
 export function ImportForm({ slug }: { slug: string }) {
   const [state, action, pending] = useActionState<ImportState, FormData>(importCsv.bind(null, slug), null);
+  const setCounts = useSetPendingCounts();
+  // New replies change the sidebar's unreviewed counts; the action returns them.
+  useEffect(() => { if (state?.pending) setCounts(state.pending); }, [state, setCounts]);
 
   return (
     <div className="flex flex-col gap-6">
