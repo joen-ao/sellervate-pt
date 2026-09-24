@@ -16,27 +16,32 @@ export function queueHref({ brand, status, page }: QueueQuery) {
 const STATUS_LABEL: Record<QueueStatus, string> = { unreviewed: 'Unreviewed', reviewed: 'Reviewed', all: 'All' };
 
 // Server component: every filter is a link, the URL is the only state.
+// Two questions, two shapes: status is a segmented control, brand a row of pills.
 export function QueueFilters({ brands, brand, status }: { brands: QueueBrand[]; brand?: string; status: QueueStatus }) {
-  const chip = (active: boolean) => `btn btn-xs ${active ? 'btn-neutral' : 'btn-ghost'}`;
+  const pill = (active: boolean) => [
+    'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+    active ? 'bg-base-300 text-base-content' : 'text-base-content/55 hover:bg-base-300/40 hover:text-base-content',
+  ].join(' ');
   return (
     <nav aria-label="Queue filters" className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap gap-1">
-        <Link href={queueHref({ status })} className={chip(!brand)} aria-current={!brand ? 'true' : undefined}>
-          All brands
-        </Link>
-        {brands.map(b => (
-          <Link key={b.id} href={queueHref({ brand: b.slug, status })} className={chip(brand === b.slug)}
-            aria-current={brand === b.slug ? 'true' : undefined}>
-            {b.name}
+      <div className="flex rounded-field bg-base-200 p-0.5">
+        {QUEUE_STATUSES.map(s => (
+          <Link key={s} href={queueHref({ brand, status: s })}
+            className={`rounded-[0.4rem] px-3 py-1 text-xs font-medium transition-colors ${
+              s === status ? 'bg-base-300 text-base-content' : 'text-base-content/55 hover:text-base-content'}`}
+            aria-current={s === status ? 'true' : undefined}>
+            {STATUS_LABEL[s]}
           </Link>
         ))}
       </div>
-      <div className="join">
-        {QUEUE_STATUSES.map(s => (
-          <Link key={s} href={queueHref({ brand, status: s })}
-            className={`join-item btn btn-xs ${s === status ? 'btn-active' : ''}`}
-            aria-current={s === status ? 'true' : undefined}>
-            {STATUS_LABEL[s]}
+      <div className="flex flex-wrap gap-1">
+        <Link href={queueHref({ status })} className={pill(!brand)} aria-current={!brand ? 'true' : undefined}>
+          All brands
+        </Link>
+        {brands.map(b => (
+          <Link key={b.id} href={queueHref({ brand: b.slug, status })} className={pill(brand === b.slug)}
+            aria-current={brand === b.slug ? 'true' : undefined}>
+            {b.name}
           </Link>
         ))}
       </div>

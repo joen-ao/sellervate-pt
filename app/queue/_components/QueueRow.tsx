@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Check } from 'lucide-react';
 import { Pill, scoreTone } from '@/components/Pill';
 import { SeverityDot } from '@/components/SeverityDot';
 import type { QueueItem } from '@/lib/data/replies';
@@ -12,37 +13,35 @@ export function QueueRow({ item }: { item: QueueItem }) {
   return (
     <li>
       <Link href={`/reviews/${item.id}`}
-        className={`${ROW_HEIGHT} grid grid-cols-[1fr_auto] items-center sm:grid-cols-[9rem_1fr_auto] gap-4 overflow-hidden px-4 text-sm hover:bg-base-200`}>
+        className={`${ROW_HEIGHT} grid grid-cols-[1fr_auto] items-center gap-5 overflow-hidden px-4 text-sm transition-colors hover:bg-base-300/40 sm:grid-cols-[9rem_1fr_auto]`}>
         <div className="hidden min-w-0 sm:block">
-          <div className="flex items-center gap-2">
-            <Pill tone="neutral">{item.brandName}</Pill>
-          </div>
-          <p className="truncate text-xs text-base-content/60">
+          <p className="truncate font-medium">{item.brandName}</p>
+          <p className="truncate text-xs text-base-content/50">
             {item.specialistName} · {relativeTime(item.sentAt)}
           </p>
         </div>
         <div className="min-w-0">
-          <p className="truncate text-base-content/60">
+          <p className="truncate text-base-content/50">
             {/* on small screens the brand column folds into the first line, keeping the row two lines tall */}
             <span className="font-medium text-base-content sm:hidden">{item.brandName} · </span>
             {item.customerSnippet}
           </p>
-          <p className="truncate">{item.replySnippet}</p>
+          <p className="truncate text-base-content/90">{item.replySnippet}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {review ? (
             <>
               <SeverityDot severity={review.severity} />
               <Pill tone={scoreTone(review.score)} title={`Scored ${review.score} of 5`}>{review.score}/5</Pill>
               {review.acknowledgedAt && (
-                <svg role="img" aria-label="Acknowledged" viewBox="0 0 16 16" className="size-4 text-success">
-                  <title>Acknowledged</title>
-                  <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Check role="img" aria-label="Acknowledged" size={16} strokeWidth={2} className="text-success" />
               )}
             </>
           ) : (
-            <Pill>Unreviewed</Pill>
+            <span className="flex items-center gap-2 text-xs text-base-content/50">
+              <span aria-hidden className="size-2 rounded-full border border-base-content/40" />
+              To review
+            </span>
           )}
         </div>
       </Link>
