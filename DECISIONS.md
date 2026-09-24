@@ -75,6 +75,19 @@ cursor at 20k replies.
 rows, because every other layer is a screen you can see. Not hour five: `curl`
 against the real routes covers the same ground in a tenth of the time.
 
+**`npm run setup` writes `.env.local`, reversing PR #1.** That branch decided
+every line of `.env.example` should be commented out, on the grounds that a
+half-real `.env.local` is harder to debug than an empty one. I believed it until
+I cloned the repo into a clean directory and ran the definition of done verbatim:
+every page answered 500, `supabaseUrl is required`. "Clone to running in under
+ten minutes" is a checklist item, and a file you must hand-edit before the app
+starts fails it in the first minute. My first repair was to commit the local
+demo values, which the repository's own secret scanner rejected — correctly,
+since they are JWTs, and "it is only a demo key" is how real keys get committed.
+So the values are read from `supabase status` at setup time instead. No key is
+ever in the repository, and the app uses your stack's keys rather than ones that
+happened to match on the day this was written.
+
 ## AI
 
 **How I worked.** Specs first, one branch per spec, an agent on each: it writes
@@ -105,6 +118,12 @@ sidebar counters in PR #14 did not move after "Got it". PR #15 is the fix.
 **Finished.** Queue, review panel, brand trend, specialist view, RLS on the
 request path, the empty/loading/error pass, the shell and person picker, the
 client report (P5), helpdesk ingestion (P4).
+
+**Extra, after the six hours.** PRs #17–19 replaced the visual layer: warm
+graphite, serif titles, a new shell, every view restyled, specced in
+`specs/redesign/` and UI only — no DAL, action or migration changed. Nothing in
+the brief asked for it, it is not counted in the six, and it is not offered as
+part of what the six bought.
 
 **Half done.** Brand stats aggregate in JS; the report's "addressed" count is
 stubbed until P3 exists.

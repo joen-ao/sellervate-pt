@@ -8,25 +8,44 @@ that judgement back. Not a helpdesk, not an inbox, no model scores anything.
 branch to its spec. `CLAUDE.md` is what an agent session loads before it writes
 a line.
 
+## Before you start
+
+Three things have to be on the machine. None is installed by `npm i`, and the
+first one fails in a way that does not explain itself:
+
+- **Docker, running.** Supabase's local stack is containers, so `supabase start`
+  needs the daemon already up. On a Mac that means Docker Desktop open, not just
+  installed.
+- **Node 20 or newer** (`node -v`). Next 15 will not run on 18.
+- **The Supabase CLI**, which is deliberately not a dependency of this package
+  (see the bootstrap PR): either `brew install supabase/tap/supabase`, or drop
+  the `npx supabase@2.117.0` prefix in front of the two `supabase` commands
+  below — which is exactly what `npm run db:reset` does.
+
 ## Clone to running
 
 ```
 git clone
 supabase start
 supabase db reset
-cp .env.example .env.local
-npm i && npm run dev
+npm i
+npm run setup
+npm run dev
 ```
 
-Those are the steps from the definition of done in `specs/00-system-overview.md`,
-verbatim. Two things they assume:
+Nothing to fill in between those and the app. `npm run setup` writes `.env.local`
+from the Supabase stack you just started — it reads the API URL and the
+service-role key out of `supabase status` and generates a `SESSION_SECRET` for
+this machine. It refuses to overwrite an existing `.env.local`, so rerunning it
+is safe; delete the file to regenerate.
 
-- The Supabase CLI. It is deliberately not a dependency of this package (see the
-  bootstrap PR), so either put it on your `PATH` — `brew install
-  supabase/tap/supabase` — or write `npx supabase@2.117.0 start` and
-  `npx supabase@2.117.0 db reset`, which is what `npm run db:reset` does.
-- `cp .env.example .env.local` copies a file whose entries are all commented out,
-  so open `.env.local` afterwards and fill in the values `supabase start` printed.
+This is one step away from the definition of done in
+`specs/00-system-overview.md`, which said `cp .env.example .env.local`. That copy
+left every value commented out and the app answered 500 on every page, and the
+obvious repair — commit working values — means committing a JWT, which trips
+every secret scanner pointed at this repository. Reading the keys from the
+running stack is both cleaner and more correct: it uses your keys, not ones that
+happen to match today.
 
 ## What is in the database
 
@@ -85,17 +104,22 @@ npm run lint        # eslint
 
 ## Hours, and how this was built
 
-**Six hours.** That is the number, and it is the cap rather than a stopwatch
-reading: my own time in front of this project came in a little under it.
+**Six hours**, up to and including PR #15. The visual redesign in PRs #17–19
+came afterwards and is **extra**: it is not counted in the six and nothing in the
+brief asked for it.
 
-It is worth saying plainly how it was spent, because the repository is larger
-than six hours of typing. I wrote the specs in `specs/` first, then ran agent
+It is worth saying plainly what those six hours were, because the repository is
+larger than six hours of typing and I do not want that read the wrong way. **I
+orchestrated and reviewed; the agents wrote the code.** I read the notes, chose
+which of the three readings to build, wrote the specs in `specs/`, then ran agent
 sessions in parallel — one branch, one PR each, coordinated by
-`specs/PARALLEL.md` — and my time went on deciding what to build, reading each
-pull request and testing the result before merging it. The wall clock across the
-history is about a day; several branches were running while I was not at the
-keyboard, and I do not count that. The six hours are mine, not the machine's.
-`docs/sessions/time-log.md` has the breakdown by wave.
+`specs/PARALLEL.md`. Every implementation commit in this history was written by
+an agent. My time went on deciding what to build, reading each pull request
+before merging it, and testing the result in the browser and with `curl`.
+
+The wall clock across the history is about a day, because branches ran while I
+was away from the keyboard. That is not the number. `docs/sessions/time-log.md`
+has the split, and says which parts are estimates.
 
 ## RLS, the second gate
 
