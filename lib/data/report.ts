@@ -2,6 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { admin } from '@/lib/supabase/admin';
+import { asUser } from '@/lib/supabase/rls';
 import { requireRole } from '@/lib/current-user';
 import { resolveMemberBrand } from '@/lib/data/membership';
 import type { Week } from '@/lib/data/brand-stats';
@@ -62,15 +63,16 @@ async function requireLeadOf(slug: string) {
 }
 
 export async function getBrandReport(slug: string, period: Period): Promise<BrandReport> {
-  const { brand } = await requireLeadOf(slug);
+  const { user, brand } = await requireLeadOf(slug);
 
-  const [rpc, workingOn, addressed] = await Promise.all([
-    admin.rpc('brand_report', { p_brand_id: brand.id, p_from: period.from, p_to: period.to }),
-    getWorkingOn(brand.id, period),
+  // brand_report is security invoker: run as the user, RLS applies inside it too.
+  const [[rpc], workingOn, addressed] = await Promise.all([
+    asUser(user.id, tx => tx<{ report: unknown }[]>`
+      select brand_report(${brand.id}, ${period.from}::date, ${period.to}::date) as report`),
+    getWorkingOn(user.id, brand.id, period),
     countAddressed(brand.id, period),
   ]);
-  if (rpc.error) throw rpc.error;
-  const r = ReportJson.parse(rpc.data);
+  const r = ReportJson.parse(rpc.report);
 
   return {
     brand: { name: brand.name, slug: brand.slug },
@@ -87,25 +89,26 @@ export async function getBrandReport(slug: string, period: Period): Promise<Bran
 
 // The note for exactly this period; failing that, the latest non-empty note of
 // the brand, marked as carried over (the default period moves every day).
-async function getWorkingOn(brandId: string, period: Period): Promise<WorkingOn> {
-  const exact = await admin.from('brand_report_notes').select('working_on')
-    .eq('brand_id', brandId).eq('period_start', period.from).eq('period_end', period.to)
-    .maybeSingle();
-  if (exact.error) throw exact.error;
-  if (exact.data) return { text: exact.data.working_on, carriedFrom: null };
+async function getWorkingOn(userId: string, brandId: string, period: Period): Promise<WorkingOn> {
+  return asUser(userId, async tx => {
+    const [exact] = await tx<{ working_on: string }[]>`
+      select working_on from brand_report_notes
+      where brand_id = ${brandId} and period_start = ${period.from}::date and period_end = ${period.to}::date`;
+    if (exact) return { text: exact.working_on, carriedFrom: null };
 
-  const { data: latest, error } = await admin.from('brand_report_notes')
-    .select('period_start, period_end, working_on')
-    .eq('brand_id', brandId).neq('working_on', '')
-    .order('updated_at', { ascending: false }).limit(1).maybeSingle();
-  if (error) throw error;
-  return latest
-    ? { text: latest.working_on, carriedFrom: { from: latest.period_start, to: latest.period_end } }
-    : { text: '', carriedFrom: null };
+    const [latest] = await tx<{ period_start: string; period_end: string; working_on: string }[]>`
+      select period_start, period_end, working_on from brand_report_notes
+      where brand_id = ${brandId} and working_on <> ''
+      order by updated_at desc limit 1`;
+    return latest
+      ? { text: latest.working_on, carriedFrom: { from: latest.period_start, to: latest.period_end } }
+      : { text: '', carriedFrom: null };
+  });
 }
 
 // "Addressed: N" needs P3's alert acknowledgements, which may not be merged.
-// Feature-detected at runtime: a missing table (or a schema that differs from
+// Stays on the service-role client until P3 lands (a missing table inside
+// asUser() would abort the transaction). Feature-detected at runtime: a missing table (or a schema that differs from
 // the assumed brand_id / acknowledged_at) omits the number instead of failing.
 async function countAddressed(brandId: string, period: Period): Promise<number | null> {
   try {
@@ -123,9 +126,11 @@ async function countAddressed(brandId: string, period: Period): Promise<number |
 
 export async function saveWorkingOn(slug: string, period: Period, text: string): Promise<void> {
   const { user, brand } = await requireLeadOf(slug);
-  const { error } = await admin.from('brand_report_notes').upsert({
-    brand_id: brand.id, period_start: period.from, period_end: period.to,
-    working_on: text, updated_by: user.id, updated_at: new Date().toISOString(),
-  }, { onConflict: 'brand_id,period_start,period_end' });
-  if (error) throw error;
+  // As the user: RLS's policy on brand_report_notes (lead, member, updated_by = me)
+  // re-checks what requireLeadOf already did.
+  await asUser(user.id, tx => tx`
+    insert into brand_report_notes (brand_id, period_start, period_end, working_on, updated_by, updated_at)
+    values (${brand.id}, ${period.from}::date, ${period.to}::date, ${text}, ${user.id}, now())
+    on conflict (brand_id, period_start, period_end)
+    do update set working_on = excluded.working_on, updated_by = excluded.updated_by, updated_at = now()`);
 }
