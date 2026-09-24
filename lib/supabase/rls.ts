@@ -16,7 +16,19 @@ function client(): postgres.Sql {
   if (!sql) {
     const url = process.env.DATABASE_URL_APP;
     if (!url) throw new Error('DATABASE_URL_APP is not set (see .env.example)');
-    sql = postgres(url, { max: 5 });
+    sql = postgres(url, {
+      max: 5,
+      // Same wire shapes the DAL returned through supabase-js: timestamps as ISO
+      // strings (postgres.js default is Date objects), dates as 'YYYY-MM-DD'.
+      types: {
+        timestamp: {
+          to: 1184, from: [1114, 1184],
+          serialize: (x: Date | string) => (x instanceof Date ? x.toISOString() : x),
+          parse: (x: string) => new Date(x).toISOString(),
+        },
+        dateOnly: { to: 1082, from: [1082], serialize: (x: string) => x, parse: (x: string) => x },
+      },
+    });
   }
   return sql;
 }
