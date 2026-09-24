@@ -20,6 +20,10 @@ export async function QueueView({ brand, status, page, caughtUp }: Props) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Review queue</h1>
+          <p className="max-w-prose text-base-content/70">
+            Replies your specialists already sent. Score each one and flag anything that could cost
+            the account — Review next takes you to the oldest one waiting.
+          </p>
           <p className="text-sm text-base-content/70">
             {data.unreviewedTotal} unreviewed · {brandCount} {brandCount === 1 ? 'brand' : 'brands'}
             <span className="text-base-content/50"> · showing the last {QUEUE_WINDOW_HOURS} h</span>

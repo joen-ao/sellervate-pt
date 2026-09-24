@@ -16,8 +16,10 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-8">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <Link href="/queue" className="text-sm text-base-content/60 hover:underline">← Queue</Link>
           <h1 className="text-2xl font-semibold">{brand.name}</h1>
+          <p className="max-w-prose text-base-content/70">
+            How {brand.name} replies are scoring, what keeps going wrong, and the critical errors to act on.
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
