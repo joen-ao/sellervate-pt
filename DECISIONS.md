@@ -1,209 +1,148 @@
 # Decisions
 
-What we chose, what we gave up, and why. Newest last.
+Six hours. What I read into the notes, what I built, how it is defended, and the
+thing I would flag hardest if this were somebody else's repository.
 
-## Unknown brand is 404, known brand you don't cover is 403
+## Product
 
-`resolveMemberBrand(userId, slug)` looks the slug up first and checks membership
-second. An unknown slug is a 404; a real brand the user is not a member of is a
-403.
+**The real problem.** The lead's judgement already exists — five replies a
+morning out of hundreds — and then it evaporates into Slack. So the failure that
+costs accounts surfaces weeks late or never, a new joiner is onboarded by digging
+through the inbox the night before, and "are we getting better" is a sentence
+rather than a number. The missing thing is not review. It is a **record** of a
+review that already happens.
 
-The cost: a 403 tells the caller that the brand exists. We accept that because
-the brand list is Sellervate's own client roster, which everyone in the tool
-already works for — it is not a secret from specialists. What must never leak is
-the *rows* inside a brand, and those stay behind the membership check either way.
+**The reading I chose:** the reviewing loop, with the brand trend on top. Of the
+three offered it is the one the other two stand on — a proof and a library are
+both downstream of having scored rows at all. So `/queue` ("Review next" so the
+lead never has to choose), `/reviews/[id]` (score, severity, categories, comment,
+with the brand's guidelines on screen because that is what the reply is judged
+against), `/me` (the specialist reads back their own scores and presses **Got
+it**). The trend came next: "I would rather show them the number than say the
+sentence" is the only line in the notes with a deadline attached.
 
-The alternative (404 for both) hides existence, but it makes "you're not
-assigned to this brand" indistinguishable from a typo, for the user and for
-whoever is debugging a missing assignment.
+**What I left out.** Calibration, the coaching library and pattern alerts are
+specified in `specs/plus/` and not built: each needs the scored rows this version
+produces, so they are V2 by construction, not by fatigue. Reviews are immutable —
+an audit trail you can rewrite is not one. No search, bulk actions or assignment;
+a lead reading five replies does not need to find anything.
 
-## RLS is a second gate, defined and proven
+**Where a model would earn its place.** Not scoring. First, **ordering the
+queue** — the lead gets through five of thirty, so ranking which five are most
+likely to be wrong changes the economics of the product. What would have to be
+true first: a few hundred human-scored rows *per brand* to measure the ranker
+against (there are 13 today), the lead able to override the order, and the
+unranked queue still browsable so a reply never goes invisible because a model
+ranked it low. Second, **drafting the opening sentence of the comment** from the
+categories the lead already ticked: cheap, reversible, lead holds the pen.
 
-Migration `0002_rls.sql` enables and forces RLS on all five tables. Identity is
-`app.current_user_id`, set with `set_config(..., true)` inside the same
-transaction as the query, then `set local role app_user`. Both die at commit, so
-a pooled connection cannot hand one user's identity to the next request; a
-session-level `set role` / `set` would. `scripts/rls-proof.sql` shows Dani sees
-only his 12 replies and 8 reviews, Marta 17 and 12, nobody sees Lume unless a
-member, and an unset user sees nothing.
+Where I would refuse one: deciding `severity = critical`. That field is the
+reason this product exists, it names a person, and a false positive is an
+accusation. A human puts it there or nobody does.
 
-**Option A, a direct Postgres connection (`lib/supabase/rls.ts`, `asUser()`),
-not Option B (one RPC per read).** PostgREST gives every REST call its own
-transaction, so the setting cannot be shared through supabase-js. A would keep
-the DAL's queries in TypeScript next to the code that calls them; B would move
-every read into a SQL function and double the places a filter can drift. The
-connection logs in as `app_login`: no BYPASSRLS, NOINHERIT, so without
-`set local role app_user` it cannot read a single table — forgetting the switch
-fails loudly instead of quietly seeing everything.
+**What I would ask before a V2.** Is calibration a feature or an insult — does
+Marta want to see Nuria's reviews? And is "Got it" enough, or does the specialist
+need to answer back?
 
-**Not on the request path when 0002 landed** (it is now — see "RLS is on the request path" below). The DAL files that would call `asUser()`
-(`replies`, `reviews`, `brand-stats`, `my-reviews`) were being written on four
-parallel branches when this landed, and `membership.ts` is a frozen contract.
-Rewiring them here meant guaranteed conflicts, so the switch from `admin` to
-`asUser()` is a follow-up once 03–06 merge. Until then the DAL is the only gate
-on the request path and RLS protects every other consumer: the anon key
-(which, before 0002, could read every table through PostgREST under Supabase's
-default grants), a future ingester or report job, a bug.
+## Architecture
 
-What the DAL-bug experiment shows: `` asUser(dani, tx => tx`select count(*) from
-replies`) `` — no specialist filter at all, the bug the spec asks us to simulate
-— returns 12, Dani's own. That is what defence in depth means. The spec's
-version (`remove .eq('specialist_id', u.id)` in `/api/me/reviews`) waits for
-that route to exist and to run through `asUser()`.
+**Shape.** Server components read through `lib/data/*` (the DAL); server actions
+write through the same DAL; the handlers under `app/api` exist only so this can
+be checked with `curl`. Identity comes from `getCurrentUser()` and nowhere else —
+a signed httpOnly cookie, never a header, param or body.
 
-Choices beyond the spec's SQL, each deliberate:
-- `is_brand_member` and `current_app_role` are `security definer`. As invoker,
-  `brand_members`' policy would call `is_brand_member`, which reads
-  `brand_members`, which applies the policy — infinite recursion.
-- Policies are `to app_user`, and the helper functions are revoked from
-  `anon`/`authenticated`: nothing but the app role gets a policy or an RPC.
-- Grants are narrow: `select` on all, `insert` on `reviews`, and `update` on
-  `reviews(acknowledged_at)` only. The spec's ack policy alone would let a
-  specialist rewrite the score of a review of their own reply.
-- `reply_with_review` gets `security_invoker = true`. It is owned by `postgres`,
-  which is BYPASSRLS here, so without it the view would skip every policy. A
-  later `create or replace view` must restate the option.
-- No `grant app_user to authenticated` (the spec's workaround for running the
-  proof). Instead `postgres` gets `app_user` with `inherit false, set true`:
-  since PG16 a non-superuser cannot `set role` to a role it merely created, and
-  `inherit false` means postgres gains nothing from the membership.
+**Data model.** `score` (1–5) *and* `severity` *and* `categories[]`, severity
+independent of score: a 4/5 can still carry the factual error that loses the
+account, and the trend treats any `critical` as a red event. `unique (reply_id,
+reviewer_id)` lets two leads review one reply when calibration arrives, no
+migration; `unique (source, external_id)` makes ingestion idempotent from day
+one. Reviews carry no `brand_id` — it is derived through `replies`.
 
-## The specialist's 30-day summary is computed in JS
+**Authorisation: two gates, both on the server.** The DAL resolves the user,
+resolves membership and filters in SQL, never after the fetch. RLS is the second
+gate: identity is a *transaction-local* setting (`set_config(..., true)` plus
+`set local role app_user`) on a connection logging in as `app_login`, a role
+without `BYPASSRLS`. A session-level `SET` on a pooled connection would hand one
+user's identity to the next request; that is the footgun this shape avoids. The
+experiment: delete the specialist filter from `/api/me/reviews` and Dani still
+sees only Dani's rows. Unknown brand is 404, a brand you do not cover is 403 —
+the client roster is not a secret from the people who work it; the rows inside it
+are. Checks run in each route's `layout.tsx`, above `loading.tsx`, or a
+`forbidden()` renders the 403 screen with an HTTP **200**.
 
-`listMyReviews()` (`lib/data/my-reviews.ts`) fetches at most 100 reviews, already
-restricted in SQL to the specialist's own replies in their member brands, and
-computes count / average / critical over the last 30 days from those rows. That
-is a deliberate exception to "aggregate in SQL": the rows are already isolated,
-the set is tiny, and it saves a second query or an RPC (which would need a
-migration this branch does not have).
+**What real authentication would take.** Replace `/switch` with Supabase Auth,
+have `getCurrentUser()` read `auth.getUser()`, point RLS at `auth.uid()`. The DAL
+and the membership model do not change.
 
-The cost: a specialist with more than 100 reviews in 30 days would see an
-undercount. Nobody is near that; if they get there, it becomes a SQL aggregate.
+**What breaks first.** `lib/data/brand-stats.ts` aggregates in JS — the spec
+asked for a SQL function, that branch had no migration slot, flagged in PR #4 and
+accepted knowingly. At a few thousand reviews per brand it becomes a SQL function
+and a swapped reducer. Next: the queue's 48-hour window, a filter today and a
+cursor at 20k replies.
 
-## Access checks live in the segment layout, above `loading.tsx`
+**Tests.** First test would be table-driven over the DAL, role × membership ×
+expected rows, because every other layer is a screen you can see and that is the
+one place a bug is silent; not in hour five, because `curl` against the real
+routes covers the same ground in a tenth of the time.
 
-One pattern for every route. The check that can say 307/403/404 runs in the
-route's `layout.tsx`; `loading.tsx` sits below it; the page renders the data.
+## AI
 
-Why: in Next 15.5, `loading.tsx` wraps the page in a Suspense boundary, so the
-skeleton streams with a 200 before the page runs. A `forbidden()` thrown in the
-page then renders the 403 screen with an HTTP 200. A layout renders before that
-boundary, so its `forbidden()` / `notFound()` / `redirect()` set the real
-status. The checks are `cache()`d (`getReplyForReview`, `assertBrandStatsAccess`,
-`assertQueueAccess` → `scopeBrandIds`), so the page reuses the answer instead
-of querying twice. The page still goes through the same DAL call, so a page
-reached without its layout re-rendering (a client navigation that only changes
-the query string) is still checked, it just can't set an HTTP status there,
-and there it doesn't matter.
+**How I worked.** Specs first, one branch per spec, an agent on each: it writes
+the code and opens the PR, I read the PR before merging. Several ran in parallel
+by wave (`specs/PARALLEL.md`), which is why the wall clock is longer than the
+hours. The standing prompt every session loads is `CLAUDE.md`, mostly
+prohibitions:
 
-`/queue` was the exception (it had no `loading.tsx`, and streamed behind its
-own `<Suspense>`), because its check depends on `?brand=` and a layout gets
-`params`, not `searchParams`. `middleware.ts` now copies the query string into a
-request header (`x-queue-search`, always overwritten) for `/queue` only, and
-`app/queue/layout.tsx` reads `?brand=` from it. That header names a brand, not
-a person, and the brand is resolved through membership like any other input.
+> - Identity comes only from `getCurrentUser()`. Never from headers, params, body,
+>   or a client component.
+> - Every `lib/data` function resolves the current user and filters by membership
+>   in SQL. No post-fetch filtering. Name columns in every `.select()`. No `*`.
+> - `gh pr create` with what changed, what to review first, what was deliberately
+>   left. **Never merge.**
 
-Rejected: dropping `loading.tsx` everywhere and streaming behind an explicit
-`<Suspense>` after a check in the page. It also gives real statuses, but
-contradicts the spec's per-route `loading.tsx`, shows nothing on a client
-navigation until the check returns, and for `/reviews/[id]` the check *is* the
-data fetch, so there'd be nothing left to stream.
+**Where the agent was right and I was wrong.** My spec put the access check in
+the page. In PR #4 the agent found every route returning HTTP 200 — including
+Dani on Voltaire — because `loading.tsx` wraps the page in Suspense and the 200
+shell is out before `forbidden()` runs. It named the cause and proposed the
+segment-layout pattern; I applied it to every route.
 
-`curl -w "%{http_code}"` for every forbidden / not-found case on every route
-is in the `feat/ui-states` PR.
+**Where I overrode it.** The RLS grants in my own spec (`grant select, insert,
+update on all tables`) would have let a specialist rewrite the score of a review
+of their own reply; narrowed to `update (acknowledged_at)`. Same PR:
+`reply_with_review` needed `security_invoker = true`, or the view — owned by a
+BYPASSRLS role — skipped every policy it was meant to sit behind.
 
-## A database outage is an error screen, not "signed out"
+**Where it got past me.** PR #14 shipped a sidebar whose counters did not move
+after "Got it". I found it clicking through as Dani, not reading the diff. PR #15
+is the fix.
 
-`getCurrentUser()` used to ignore the query error and return `null`, so with
-the database down every page redirected to "Pick who you are". It now throws on
-a database error (same signature; `null` still means no valid cookie or no such
-profile). The root layout catches its own failure to load the switcher and
-still renders the page, so the route's `error.tsx` (or `app/error.tsx`, when the
-failing call is in a segment layout) shows a retry. `app/global-error.tsx` is
-the backstop if the root layout throws anyway.
+## Status
 
-## The client report (P5) computes in one SQL function, as invoker
+**Finished.** Queue, review panel, brand trend, specialist view, RLS on the
+request path, the empty/loading/error pass, the shell and person picker, the
+client report (P5), helpdesk ingestion (P4).
 
-`brand_report(brand, from, to)` (migration 0007) returns only aggregates — no
-reviewer, specialist, reply id or comment — and the DAL parses it with a
-*strict* zod object, so an extra key fails the request instead of reaching the
-page. It is `security invoker`, unlike 0002's helpers: it does not read
-`brand_members` itself, so there is no policy recursion to break, and as invoker
-an `app_user` caller only aggregates the rows RLS shows it (Marta asking for
-Lume gets `n = 0`). As definer it would hand any brand's numbers to anyone with
-execute. Execute is revoked from `anon`/`authenticated`. The app still calls it
-as `service_role`, so the DAL checks lead + membership first.
+**Half done.** Brand stats aggregate in JS; the report's "addressed" count is
+stubbed until P3 exists.
 
-Changes to the spec's SQL, each deliberate:
-- The previous period is the same length as the current one. The spec's
-  `p_from - (p_to - p_from)` is one day shorter, because `[p_from, p_to]` is inclusive.
-- "Top three things we improved" compares each category's *share* of reviews,
-  not its raw count. A quieter period would otherwise read as improvement on
-  every category — a claim we would be making to the client.
-- `limit 3` sits in a subquery; in the spec it applied to the single aggregated
-  row, so it never limited anything (checked: it returns all five of five).
-- Weeks with no reviews are emitted (`generate_series`) so the chart shows gaps
-  instead of hiding them; bucketing is explicit UTC.
+**Never touched.** P1 calibration, P2 coaching library, P3 pattern alerts: specs
+written, migration slots `0003`–`0005` reserved and deliberately empty — which is
+why the migrations jump from `0002` to `0006`. P1 first: two leads scoring the
+same reply differently is the fastest way to learn whether any of these numbers
+mean anything.
 
-A note is keyed by the exact period, as specified. The default period is "the
-last 90 days", so it moves every day; without help a note written today would be
-gone tomorrow. When there is no note for the exact period, the latest non-empty
-note of the brand pre-fills the form (and prints), marked as carried over.
+**The one thing I would flag hardest if this were somebody else's PR: P4,
+helpdesk ingestion.** The note says *"Eventually this should pull the replies out
+of the helpdesk on its own. **Not now.** Just do not make it impossible later."*
+`source`, `external_id` and `unique (source, external_id)` in migration `0001`
+already satisfied "not impossible later" — that was the whole ask, and it cost
+three columns. The bearer-token API and the CSV import are a migration, a route,
+a DAL and a screen spent on the half of the sentence that said *not now*. On
+somebody else's PR I would close it and point at the note. I left it because it
+is the only place in the repo where a non-human principal exists — but it is
+scope I was told not to spend, and calling it a feature would be the wrong lesson.
 
-## Ingestion has a machine principal: a bearer token per source
-
-`POST /api/ingest/[sourceId]` is the first caller that is not a person. It gets
-its own identity, a bearer token bound to one `ingest_sources` row, and never
-touches `getCurrentUser()`: no cookie is read on that path, and a token cannot
-act as a user or reach another source. Only the token's sha256 is stored; the
-DAL (`lib/data/ingest.ts`) hashes what arrives and compares the two digests with
-`timingSafeEqual`. The check lives in the DAL, not the route, so no other server
-code can call `ingestBatch` "as a token" without holding one. `app_user` is not
-granted the `token_hash` column.
-
-What the token authorises is decided by the source row, not the payload:
-`brand_id` comes from the source, so a Voltaire token can only ever write
-Voltaire replies, whatever the body says. `csv` sources have no token and are
-UI-only (a lead of the brand, through the cookie); API sources refuse the UI.
-
-Re-sends are idempotent: upsert on `(source, external_id)` with
-`ignoreDuplicates`, so a row already there — and any review on it — is never
-overwritten. Unknown specialist emails go to `replies_unmatched`, never dropped.
-
-Deliberately not enforced: that the specialist is a member of the source's
-brand. A helpdesk can show a reply by someone not yet in `brand_members`
-(onboarding lag, a cover shift). The reply lands in the brand, the lead sees it
-in the queue, and the gap is visible rather than silently discarded. The cost:
-that specialist does not see the reply or its review under `/me` until someone
-adds the membership, because what a specialist sees is still gated by
-membership.
-
-## RLS is on the request path
-
-Every DAL read and every user write now runs through `asUser(u.id, tx => …)`:
-membership, the queue, the review panel and `createReview`, brand stats, `/me`
-and the acknowledgement, the client report and its notes. The DAL keeps every
-filter it had (brand ids, `reviewer_id`, `specialist_id`); RLS is the second
-gate, not a replacement. `DATABASE_URL_APP` logs in as `app_login`.
-
-The spec's experiment, run through the real endpoints with the filters deleted
-from the DAL: `/api/me/reviews` as Dani still returned only reviews on Dani's
-replies, as Iker only Iker's; `/api/brands/kraftco/replies` as Dani returned
-only Dani's rows, never another specialist's and never Lume; Marta never saw
-Lume. What RLS did *not* do is keep the query on the right brand — without the
-DAL's brand filter Dani's Voltaire replies came back under "kraftco". RLS
-guards who may see a row; the DAL still decides which rows a screen asks for.
-
-What stays on the service-role client, deliberately:
-- `getCurrentUser()` and the user switcher (who is asking has to be answered
-  before there is a user to be).
-- Three existence lookups that return ids only — brand by slug, reply by id,
-  review by id — so an existing row you may not see is a 403, not a 404 (the
-  404-vs-403 decision above). Under RLS the row would simply be invisible.
-- Ingestion (P4): the token API has no user, and `app_user` has no insert on
-  `replies` by design.
-- The P3 "addressed" count in the report, until P3 exists: a missing table
-  inside `asUser()` aborts the transaction.
-
-Side effect: with the queue in SQL, a page past the end is an empty page, no
-longer PostgREST's `PGRST103` error.
+**Second: fifteen pull requests, not one follow-up commit after a review.** Every
+review reads "accepted, merging". Some of that is real — the specs were detailed
+enough that the agents mostly hit them — but a reviewer who never sends anything
+back is worth checking.
