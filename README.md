@@ -30,9 +30,7 @@ but may not be true of yours:
 
 Then: switch to Marta → review a reply → open Voltaire → see the trend and the
 critical event → switch to Dani → see only his reviews → `curl` Lume as Dani → 403.
-Under ten minutes. **None of that walkthrough works yet** — this repo is at the
-bootstrap commit, the schema, the DAL and the screens land on the branches listed
-in `specs/README.md`.
+Under ten minutes.
 
 ## Stack
 
@@ -62,7 +60,9 @@ Attention time: _see `docs/sessions/time-log.md`._
 
 ## RLS, the second gate
 
-Migration `0002_rls.sql` turns on row-level security for every table (spec 07a).
+Migration `0002_rls.sql` turns on row-level security for every table (spec 07a),
+and the DAL runs every query as the signed-in user through `asUser()`
+(`lib/supabase/rls.ts`), so a bug in a DAL filter still cannot cross brands.
 `DATABASE_URL_APP` in `.env.local` must log in as `app_login`, not `postgres`:
 `postgresql://app_login:app_login_local@127.0.0.1:54322/postgres` (local-only
 password, see `.env.example`). To see the policies hold:
