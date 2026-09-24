@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { ArrowLeft, ArrowRight, CircleCheck } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { PAGE_SIZE } from '@/lib/data/_shared';
 import type { QueueBrand, QueueStatus } from '@/lib/data/replies';
@@ -16,40 +18,39 @@ export async function QueueView({ brand, status, page, caughtUp }: Props) {
   const brandCount = brand ? 1 : data.brands.length;
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-4 px-6 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Review queue</h1>
-          <p className="max-w-prose text-base-content/70">
-            Replies your specialists already sent. Score each one and flag anything that could cost
-            the account — Review next takes you to the oldest one waiting.
-          </p>
-          <p className="text-sm text-base-content/70">
-            {data.unreviewedTotal} unreviewed · {brandCount} {brandCount === 1 ? 'brand' : 'brands'}
-            <span className="text-base-content/50"> · showing the last {QUEUE_WINDOW_HOURS} h</span>
-          </p>
-        </div>
-        {data.brands.length > 0 && <ReviewNextButton brandSlug={brand} />}
-      </header>
+    <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
+      <PageHeader
+        eyebrow="Your work"
+        title="Review queue"
+        lead="Replies your specialists already sent. Score each one and flag anything that could cost the account — Review next takes you to the oldest one waiting."
+        meta={<>
+          <span className="text-base-content/75">{data.unreviewedTotal} unreviewed</span>
+          {' · '}{brandCount} {brandCount === 1 ? 'brand' : 'brands'} · showing the last {QUEUE_WINDOW_HOURS} h
+        </>}
+        actions={data.brands.length > 0 && <ReviewNextButton brandSlug={brand} />}
+      />
 
       {caughtUp && (
-        <div role="status" className="alert alert-success alert-soft text-sm">
+        <div role="status" className="flex items-center gap-2.5 rounded-box bg-success/10 px-4 py-3 text-sm text-success">
+          <CircleCheck size={16} strokeWidth={1.75} aria-hidden />
           Nothing left to review{brandName ? ` in ${brandName}` : ''}. You&apos;re caught up.
         </div>
       )}
 
-      {data.brands.length > 0 && <QueueFilters brands={data.brands} brand={brand} status={status} />}
+      <div className="flex flex-col gap-3">
+        {data.brands.length > 0 && <QueueFilters brands={data.brands} brand={brand} status={status} />}
 
-      {data.items.length > 0 ? (
-        <>
-          <ul className="divide-y divide-base-300 rounded-box border border-base-300">
-            {data.items.map(item => <QueueRow key={item.id} item={item} />)}
-          </ul>
-          <Pager total={data.total} page={page} brand={brand} status={status} />
-        </>
-      ) : (
-        <QueueEmpty brands={data.brands} brandName={brandName} status={status} page={page} />
-      )}
+        {data.items.length > 0 ? (
+          <>
+            <ul className="divide-y divide-base-300/70 overflow-hidden rounded-box bg-base-200">
+              {data.items.map(item => <QueueRow key={item.id} item={item} />)}
+            </ul>
+            <Pager total={data.total} page={page} brand={brand} status={status} />
+          </>
+        ) : (
+          <QueueEmpty brands={data.brands} brandName={brandName} status={status} page={page} />
+        )}
+      </div>
     </main>
   );
 }
@@ -59,9 +60,17 @@ function Pager({ total, page, brand, status }: { total: number; page: number; br
   if (pages <= 1) return null;
   return (
     <nav aria-label="Pages" className="flex items-center justify-between text-sm">
-      {page > 1 ? <Link className="btn btn-ghost btn-sm" href={queueHref({ brand, status, page: page - 1 })}>Newer</Link> : <span />}
-      <span className="text-base-content/60">Page {page} of {pages}</span>
-      {page < pages ? <Link className="btn btn-ghost btn-sm" href={queueHref({ brand, status, page: page + 1 })}>Older</Link> : <span />}
+      {page > 1 ? (
+        <Link className="btn btn-ghost btn-sm gap-1.5" href={queueHref({ brand, status, page: page - 1 })}>
+          <ArrowLeft size={14} strokeWidth={1.75} aria-hidden /> Newer
+        </Link>
+      ) : <span />}
+      <span className="tabular-nums text-base-content/50">Page {page} of {pages}</span>
+      {page < pages ? (
+        <Link className="btn btn-ghost btn-sm gap-1.5" href={queueHref({ brand, status, page: page + 1 })}>
+          Older <ArrowRight size={14} strokeWidth={1.75} aria-hidden />
+        </Link>
+      ) : <span />}
     </nav>
   );
 }
@@ -73,13 +82,13 @@ function QueueEmpty({ brands, brandName, status, page }: EmptyProps) {
     return <EmptyState title="You don't cover any brands yet." body="Ask whoever assigns brands to add you to one; its replies show up here." />;
   }
   if (page > 1) {
-    return <EmptyState title="No more replies on this page." action={<Link className="btn btn-sm" href={queueHref({ status })}>Back to page 1</Link>} />;
+    return <EmptyState title="No more replies on this page." action={<Link className="btn btn-sm btn-neutral" href={queueHref({ status })}>Back to page 1</Link>} />;
   }
   if (brandName) {
     const kind = status === 'all' ? '' : `${status} `;
     return (
       <EmptyState title={`No ${kind}replies from ${brandName} in the last ${QUEUE_WINDOW_HOURS} h.`}
-        action={<Link className="btn btn-sm" href={queueHref({ status })}>See all brands</Link>} />
+        action={<Link className="btn btn-sm btn-neutral" href={queueHref({ status })}>See all brands</Link>} />
     );
   }
   if (status === 'unreviewed') {
@@ -87,13 +96,13 @@ function QueueEmpty({ brands, brandName, status, page }: EmptyProps) {
       <EmptyState
         title="You're caught up."
         body={`Nothing unreviewed from ${brands.map(b => b.name).join(', ')} in the last ${QUEUE_WINDOW_HOURS} h.`}
-        action={<Link className="btn btn-sm" href={queueHref({ status: 'reviewed' })}>See what you reviewed</Link>}
+        action={<Link className="btn btn-sm btn-neutral" href={queueHref({ status: 'reviewed' })}>See what you reviewed</Link>}
       />
     );
   }
   return (
     <EmptyState title={`No ${status === 'all' ? '' : 'reviewed '}replies in the last ${QUEUE_WINDOW_HOURS} h.`}
       body={`The list shows the last ${QUEUE_WINDOW_HOURS} h; Review next also reaches older unreviewed replies.`}
-      action={<Link className="btn btn-sm" href={queueHref({ status: 'unreviewed' })}>Back to unreviewed</Link>} />
+      action={<Link className="btn btn-sm btn-neutral" href={queueHref({ status: 'unreviewed' })}>Back to unreviewed</Link>} />
   );
 }

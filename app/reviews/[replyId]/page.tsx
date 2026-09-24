@@ -9,9 +9,9 @@ export default async function ReviewPage({ params }: { params: Promise<{ replyId
   return runPage(async () => {
     const data = await getReplyForReview(replyId);
     return (
-      <main className="mx-auto grid max-w-6xl gap-8 px-6 py-8 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      <main className="mx-auto grid max-w-6xl gap-10 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <Exchange reply={data.reply} brand={data.brand} specialist={data.specialist} />
-        <aside className="lg:sticky lg:top-8 lg:self-start">
+        <aside className="lg:sticky lg:top-10 lg:self-start">
           {data.myReview
             ? <ReviewReadOnly review={data.myReview} />
             : <ReviewForm replyId={data.reply.id} specialistFirstName={data.specialist.full_name.split(' ')[0]} />}

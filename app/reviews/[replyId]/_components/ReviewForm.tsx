@@ -67,76 +67,89 @@ export function ReviewForm({ replyId, specialistFirstName }: { replyId: string; 
   const toggle = (c: FailureCategory) =>
     setCategories(cs => (cs.includes(c) ? cs.filter(x => x !== c) : [...cs, c]));
 
+  // Segmented options: selected is a lighter fill with an ivory ring, never a colour,
+  // except a selected Critical, which is the one red thing on the page.
+  const seg = (on: boolean, critical = false) => [
+    'flex h-10 cursor-pointer items-center justify-center rounded-[0.4rem] text-sm font-medium transition-colors has-focus-visible:outline-2',
+    on
+      ? critical ? 'bg-error text-error-content' : 'bg-base-300 text-base-content ring-1 ring-base-content/40'
+      : 'text-base-content/60 hover:bg-base-300/50 hover:text-base-content',
+  ].join(' ');
+
   return (
-    <form action={dispatch} onSubmit={onSubmit} className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-5">
-        <input type="hidden" name="replyId" value={replyId} />
+    <form action={dispatch} onSubmit={onSubmit} className="flex flex-col gap-6 rounded-box bg-base-200 p-6">
+      <input type="hidden" name="replyId" value={replyId} />
+      <h2 className="text-base font-semibold">Your review</h2>
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold">Score <span className="font-normal text-base-content/60">(keys 1–5)</span></legend>
-          <div className="grid grid-cols-5 gap-2">
-            {SCORES.map(n => (
-              <label key={n} className={`btn btn-lg ${score === n ? 'btn-neutral' : 'btn-outline'} has-focus-visible:outline-2`}>
-                <input type="radio" name="score" value={n} className="sr-only"
-                  checked={score === n} onChange={() => setScore(n)} />
-                {n}
-              </label>
-            ))}
-          </div>
-          <FieldError errors={errors?.score} />
-        </fieldset>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 flex w-full justify-between text-sm font-medium">
+          Score <span className="font-normal text-base-content/40">keys 1–5</span>
+        </legend>
+        <div className="grid grid-cols-5 gap-1 rounded-field bg-base-100/70 p-1">
+          {SCORES.map(n => (
+            <label key={n} className={`${seg(score === n)} tabular-nums`}>
+              <input type="radio" name="score" value={n} className="sr-only"
+                checked={score === n} onChange={() => setScore(n)} />
+              {n}
+            </label>
+          ))}
+        </div>
+        <FieldError errors={errors?.score} />
+      </fieldset>
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold">Severity</legend>
-          <div className="join w-full">
-            {SEVERITIES.map(s => (
-              <label key={s.value} className={`btn join-item flex-1 has-focus-visible:outline-2 ${
-                severity === s.value ? (s.value === 'critical' ? 'btn-error' : 'btn-neutral') : s.value === 'critical' ? 'btn-outline btn-error' : 'btn-outline'}`}>
-                <input type="radio" name="severity" value={s.value} className="sr-only"
-                  checked={severity === s.value} onChange={() => setSeverity(s.value)} />
-                {s.label}
-              </label>
-            ))}
-          </div>
-          <p className={`mt-1 text-sm ${severity === 'critical' ? 'text-error' : 'text-base-content/60'}`}>
-            Critical: factual or procedure error. This is the one that costs accounts.
-          </p>
-          <FieldError errors={errors?.severity} />
-        </fieldset>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-medium">Severity</legend>
+        <div className="grid grid-cols-3 gap-1 rounded-field bg-base-100/70 p-1">
+          {SEVERITIES.map(s => (
+            <label key={s.value} className={seg(severity === s.value, s.value === 'critical')}>
+              <input type="radio" name="severity" value={s.value} className="sr-only"
+                checked={severity === s.value} onChange={() => setSeverity(s.value)} />
+              {s.label}
+            </label>
+          ))}
+        </div>
+        <p className={`text-xs leading-relaxed ${severity === 'critical' ? 'text-error' : 'text-base-content/50'}`}>
+          Critical: factual or procedure error. This is the one that costs accounts.
+        </p>
+        <FieldError errors={errors?.severity} />
+      </fieldset>
 
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold">What went wrong</legend>
-          <div className="flex flex-wrap gap-2">
-            {FAILURE_CATEGORIES.map(c => (
-              <label key={c} className={`btn btn-sm rounded-full has-focus-visible:outline-2 ${categories.includes(c) ? 'btn-neutral' : 'btn-outline'}`}>
-                <input type="checkbox" name="categories" value={c} className="sr-only"
-                  checked={categories.includes(c)} onChange={() => toggle(c)} />
-                {CATEGORY_LABEL[c]}
-              </label>
-            ))}
-          </div>
-          <FieldError errors={errors?.categories} />
-        </fieldset>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 text-sm font-medium">What went wrong</legend>
+        <div className="flex flex-wrap gap-1.5">
+          {FAILURE_CATEGORIES.map(c => (
+            <label key={c} className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors has-focus-visible:outline-2 ${
+              categories.includes(c)
+                ? 'bg-base-content text-base-100'
+                : 'bg-base-300/60 text-base-content/70 hover:bg-base-300 hover:text-base-content'}`}>
+              <input type="checkbox" name="categories" value={c} className="sr-only"
+                checked={categories.includes(c)} onChange={() => toggle(c)} />
+              {CATEGORY_LABEL[c]}
+            </label>
+          ))}
+        </div>
+        <FieldError errors={errors?.categories} />
+      </fieldset>
 
-        <label className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Comment <span className="font-normal text-base-content/60">(optional)</span></span>
-          <textarea name="comment" rows={4} className="textarea w-full" maxLength={2000}
-            placeholder={`What would you tell ${specialistFirstName} about this one?`}
-            value={comment} onChange={e => setComment(e.target.value)} />
-          <FieldError errors={errors?.comment} />
-        </label>
+      <label className="flex flex-col gap-2">
+        <span className="text-sm font-medium">Comment <span className="font-normal text-base-content/40">optional</span></span>
+        <textarea name="comment" rows={4} maxLength={2000}
+          className="textarea w-full border-transparent bg-base-100/70 leading-relaxed focus:border-base-content/30"
+          placeholder={`What would you tell ${specialistFirstName} about this one?`}
+          value={comment} onChange={e => setComment(e.target.value)} />
+        <FieldError errors={errors?.comment} />
+      </label>
 
-        {state?.formError && <ErrorCard compact title={state.formError} />}
-        <Buttons pending={pending} />
-      </div>
+      {state?.formError && <ErrorCard compact title={state.formError} />}
+      <Buttons pending={pending} />
     </form>
   );
 }
 
 function Buttons({ pending }: { pending: boolean }) {
   return (
-    <div className="card-actions justify-end">
-      <button type="submit" className="btn" disabled={pending}>Save</button>
+    <div className="flex justify-end gap-2 border-t border-base-300/70 pt-5">
+      <button type="submit" className="btn btn-ghost" disabled={pending}>Save</button>
       <button type="submit" name="andNext" value="1" className="btn btn-primary" disabled={pending}>
         {pending && <span className="loading loading-spinner loading-xs" />}
         Save and next
