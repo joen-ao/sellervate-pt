@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { unstable_rethrow } from "next/navigation";
-import { UserSwitcher } from "@/components/UserSwitcher";
-import { getCurrentUser, listSwitchableUsers } from "@/lib/current-user";
+import { AppShell } from "@/components/shell/AppShell";
+import { getCurrentUser } from "@/lib/current-user";
+import { getShellBrands } from "@/lib/data/shell";
 import "./globals.css";
 
 const inter = Inter({
@@ -21,25 +22,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // If the database is down the shell still renders: the page's own error.tsx
-  // explains it, and the corner says the switcher is unavailable. A throw here
-  // would skip every error.tsx and land in global-error.tsx.
-  let people: Awaited<ReturnType<typeof loadPeople>> | null = null;
+  // If the database is down the page still renders: its own error.tsx explains
+  // it, and the corner says switching is unavailable. A throw here would skip
+  // every error.tsx and land in global-error.tsx.
+  let user: Awaited<ReturnType<typeof getCurrentUser>> | undefined;
   try {
-    people = await loadPeople();
+    user = await getCurrentUser();
   } catch (e) {
     unstable_rethrow(e); // Next's own signals (dynamic usage, redirects) pass through
     console.error(e);
   }
+  const brands = user ? await loadShellBrands() : [];
+
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        {children}
-        {people ? (
-          <UserSwitcher users={people.users} current={people.current} />
-        ) : (
+        {user ? <AppShell user={user} brands={brands}>{children}</AppShell> : children}
+        {user === undefined && (
           <p role="status" className="fixed bottom-4 right-4 z-50 rounded-field bg-base-200 px-3 py-1.5 text-sm text-base-content/70">
-            User switcher unavailable
+            Switching person is unavailable
           </p>
         )}
       </body>
@@ -47,7 +48,14 @@ export default async function RootLayout({
   );
 }
 
-async function loadPeople() {
-  const [current, users] = await Promise.all([getCurrentUser(), listSwitchableUsers()]);
-  return { current, users };
+// Its own try: losing the brand list costs the sidebar its brands and counts,
+// not the shell.
+async function loadShellBrands() {
+  try {
+    return await getShellBrands();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error(e);
+    return [];
+  }
 }
