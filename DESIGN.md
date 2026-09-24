@@ -18,3 +18,9 @@ except the floating user switcher.
 
 **States.** Every route has `loading.tsx` (a `Skeleton` shaped like the page), `error.tsx` (`ErrorCard` with a
 retry), an `EmptyState` with a real sentence and a next step, and `StatePage` for 403/404.
+
+**Shell.** Signed in: a `base-200` sidebar (daisyUI drawer, fixed from `lg`, a menu button below it) that
+answers who you are, what is waiting for you (a count on Review queue / My feedback), and, for leads, where
+each brand lives; the active brand unfolds Trends, Client report, Import replies. Signed out: the person
+picker, grouped by role, each role's job said once. Every landing page opens with one sentence on what you
+do there. Icons: `lucide-react`, 16px, stroke 1.75.
