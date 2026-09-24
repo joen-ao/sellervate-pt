@@ -16,8 +16,8 @@ first one fails in a way that does not explain itself:
 - **Docker, running.** Supabase's local stack is containers, so `supabase start`
   needs the daemon already up. On a Mac that means Docker Desktop open, not just
   installed.
-- **Node 18.18 or newer** (`node -v`), which is Next 15's own floor
-  (`^18.18.0 || ^19.8.0 || >= 20.0.0`). Verified on 26.
+- **Node 22 or newer** (`node -v`). Next 15 alone would accept 18.18, but
+  `@supabase/supabase-js` declares `>=22.0.0`, so 22 is the floor. Verified on 26.
 - **The Supabase CLI**, deliberately not a dependency of this package (see the
   bootstrap PR). Either put it on your `PATH` with
   `brew install supabase/tap/supabase`, or skip it: `npm run db:start` and
