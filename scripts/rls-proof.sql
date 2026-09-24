@@ -2,6 +2,10 @@
 -- Run as postgres against the seeded local DB, e.g.
 --   psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f scripts/rls-proof.sql
 -- Each block becomes app_user for one transaction, exactly as lib/supabase/rls.ts does.
+-- The expected values are baked into the column names (own_replies_expect_12), and
+-- they are the seed's numbers: run this against a freshly `db reset` database.
+-- Review a reply in the UI first and the counts go up, which is the proof working.
+-- No psql on the machine? docker exec -i supabase_db_sellervate-pt psql -U postgres -d postgres < this file
 \set ON_ERROR_STOP off
 
 \echo '--- Dani (specialist: Voltaire + Kraft&Co)'

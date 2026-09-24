@@ -22,4 +22,11 @@ Los bloques de código son idénticos a los de la versión en inglés (que es la
 | 07-rls-y-estados-de-ui.md | `feat/rls-defense` | `0002` | 01, 03–06 |
 | plus/P1–P5 | ver plus/README | `0003`–`0007` | ver tabla |
 
+Dos ramas corrieron sin spec propio:
+
+| Rama | PR | Escrita contra | Por qué sin spec |
+|---|---|---|---|
+| `feat/navigation` | #14 | `DESIGN.md` ("Shell") | Cada pantalla funcionaba y ninguna enlazaba con las demás. Arreglo sobre un build terminado, no una feature que especificar. |
+| `fix/sidebar-counts` | #15 | — | Bug que introdujo el shell: los contadores no se movían tras "Got it", Save ni Import. |
+
 `PARALELO.md` explica cómo corren varias ramas a la vez sin pisarse.
