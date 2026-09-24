@@ -19,7 +19,13 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
           <Link href="/queue" className="text-sm text-base-content/60 hover:underline">← Queue</Link>
           <h1 className="text-2xl font-semibold">{brand.name}</h1>
         </div>
-        <p className="text-sm text-base-content/60">Last {WINDOW_DAYS} days vs the {WINDOW_DAYS} before</p>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <Link href={`/brands/${brand.slug}/report`} className="btn btn-sm">Client report</Link>
+            <Link href={`/brands/${brand.slug}/import`} className="btn btn-sm btn-ghost">Import replies</Link>
+          </div>
+          <p className="text-sm text-base-content/60">Last {WINDOW_DAYS} days vs the {WINDOW_DAYS} before</p>
+        </div>
       </header>
 
       {stats.current.n === 0 ? (
