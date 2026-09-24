@@ -3,7 +3,7 @@ import { runPage } from '@/lib/page';
 import { getBrandReport, NOTE_MAX, parsePeriod } from '@/lib/data/report';
 import { EmptyState } from '@/components/EmptyState';
 import { TrendChart } from '../_components/TrendChart';
-import { ReportHeader, periodLabel } from './_components/ReportHeader';
+import { ReportHeader, ReportToolbar, periodLabel } from './_components/ReportHeader';
 import { ReportNumbers } from './_components/ReportNumbers';
 import { ImprovedList } from './_components/ImprovedList';
 import { WorkingOnForm } from './_components/WorkingOnForm';
@@ -26,7 +26,7 @@ export default async function ReportPage({ params, searchParams }: {
       <Sheet>
         <EmptyState title="That period can't be reported on."
           body={period.error.issues[0]?.message ?? 'Use two dates, from before to.'}
-          action={<Link href={`/brands/${slug}/report`} className="btn btn-sm">Last 90 days</Link>} />
+          action={<Link href={`/brands/${slug}/report`} className="btn btn-sm btn-neutral">Last 90 days</Link>} />
       </Sheet>
     );
   }
@@ -35,7 +35,7 @@ export default async function ReportPage({ params, searchParams }: {
   const note = r.workingOn;
 
   return (
-    <Sheet>
+    <Sheet toolbar={<ReportToolbar brand={r.brand} period={r.period} />}>
       <ReportHeader brand={r.brand} period={r.period} />
       {r.current.n === 0 ? (
         <EmptyState title="No reviews in this period." body="Pick a different period above." />
@@ -61,11 +61,17 @@ export default async function ReportPage({ params, searchParams }: {
   );
 }
 
-// The light print theme is forced on the whole route, screen included (print.css).
-function Sheet({ children }: { children: React.ReactNode }) {
+// A document preview: the app stays dark, the report is a light sheet on a
+// sunken stage. Only the sheet (.report-root) carries the print theme, and only
+// the sheet prints (print.css).
+function Sheet({ toolbar, children }: { toolbar?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div data-theme="sellervate-print" className="report-root min-h-screen bg-base-100 text-base-content">
-      <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-8">{children}</main>
+    <div className="report-stage min-h-screen bg-sunken px-4 pb-16 sm:px-8">
+      {toolbar ?? <div className="h-10 print:hidden" />}
+      <div data-theme="sellervate-print"
+        className="report-root mx-auto max-w-4xl overflow-hidden rounded-box bg-base-100 text-base-content shadow-2xl shadow-black/50">
+        <main className="flex flex-col gap-10 px-6 py-10 sm:px-12 sm:py-12">{children}</main>
+      </div>
     </div>
   );
 }
@@ -73,7 +79,7 @@ function Sheet({ children }: { children: React.ReactNode }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-base-content/70">{title}</h2>
+      <h2 className="text-xs font-medium uppercase tracking-[0.08em] text-base-content/60">{title}</h2>
       {children}
     </section>
   );

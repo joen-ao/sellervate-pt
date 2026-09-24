@@ -14,10 +14,10 @@ export function ReportNumbers({ current }: { current: BrandReport['current'] }) 
 
 function Figure({ label, value, suffix, note }: { label: string; value: string; suffix?: string; note?: string }) {
   return (
-    <div className="rounded-box border border-base-300 p-4">
-      <p className="text-sm text-base-content/70">{label}</p>
-      <p className="text-3xl font-semibold tabular-nums">
-        {value}{suffix && <span className="ml-1 text-base font-normal text-base-content/60">{suffix}</span>}
+    <div className="rounded-box bg-base-200 px-5 py-4">
+      <p className="text-xs font-medium text-base-content/60">{label}</p>
+      <p className="font-serif text-3xl font-medium tabular-nums">
+        {value}{suffix && <span className="ml-1 font-sans text-sm font-normal text-base-content/50">{suffix}</span>}
       </p>
       {note && <p className="mt-1 text-sm text-base-content/70">{note}</p>}
     </div>
