@@ -17,7 +17,7 @@ The alternative (404 for both) hides existence, but it makes "you're not
 assigned to this brand" indistinguishable from a typo, for the user and for
 whoever is debugging a missing assignment.
 
-## RLS is a second gate, defined and proven, not yet on the request path
+## RLS is a second gate, defined and proven
 
 Migration `0002_rls.sql` enables and forces RLS on all five tables. Identity is
 `app.current_user_id`, set with `set_config(..., true)` inside the same
@@ -36,7 +36,7 @@ connection logs in as `app_login`: no BYPASSRLS, NOINHERIT, so without
 `set local role app_user` it cannot read a single table — forgetting the switch
 fails loudly instead of quietly seeing everything.
 
-**Not on the request path yet.** The DAL files that would call `asUser()`
+**Not on the request path when 0002 landed** (it is now — see "RLS is on the request path" below). The DAL files that would call `asUser()`
 (`replies`, `reviews`, `brand-stats`, `my-reviews`) were being written on four
 parallel branches when this landed, and `membership.ts` is a frozen contract.
 Rewiring them here meant guaranteed conflicts, so the switch from `admin` to
@@ -177,3 +177,33 @@ in the queue, and the gap is visible rather than silently discarded. The cost:
 that specialist does not see the reply or its review under `/me` until someone
 adds the membership, because what a specialist sees is still gated by
 membership.
+
+## RLS is on the request path
+
+Every DAL read and every user write now runs through `asUser(u.id, tx => …)`:
+membership, the queue, the review panel and `createReview`, brand stats, `/me`
+and the acknowledgement, the client report and its notes. The DAL keeps every
+filter it had (brand ids, `reviewer_id`, `specialist_id`); RLS is the second
+gate, not a replacement. `DATABASE_URL_APP` logs in as `app_login`.
+
+The spec's experiment, run through the real endpoints with the filters deleted
+from the DAL: `/api/me/reviews` as Dani still returned only reviews on Dani's
+replies, as Iker only Iker's; `/api/brands/kraftco/replies` as Dani returned
+only Dani's rows, never another specialist's and never Lume; Marta never saw
+Lume. What RLS did *not* do is keep the query on the right brand — without the
+DAL's brand filter Dani's Voltaire replies came back under "kraftco". RLS
+guards who may see a row; the DAL still decides which rows a screen asks for.
+
+What stays on the service-role client, deliberately:
+- `getCurrentUser()` and the user switcher (who is asking has to be answered
+  before there is a user to be).
+- Three existence lookups that return ids only — brand by slug, reply by id,
+  review by id — so an existing row you may not see is a 403, not a 404 (the
+  404-vs-403 decision above). Under RLS the row would simply be invisible.
+- Ingestion (P4): the token API has no user, and `app_user` has no insert on
+  `replies` by design.
+- The P3 "addressed" count in the report, until P3 exists: a missing table
+  inside `asUser()` aborts the transaction.
+
+Side effect: with the queue in SQL, a page past the end is an empty page, no
+longer PostgREST's `PGRST103` error.

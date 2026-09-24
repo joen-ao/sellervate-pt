@@ -3,8 +3,9 @@ import { cache } from 'react';
 import { requireRole } from '@/lib/current-user';
 import { assertBrandMember } from '@/lib/data/membership';
 import { nextUnreviewedReplyId as nextInQueueOrder } from '@/lib/data/replies';
-import { ConflictError, NotFoundError } from '@/lib/errors';
+import { ConflictError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { admin } from '@/lib/supabase/admin';
+import { asUser } from '@/lib/supabase/rls';
 import type { Brand, Profile, Reply, Review } from '@/lib/types';
 import { ReplyId, type ReviewInput } from '@/lib/validation/review';
 
@@ -16,63 +17,74 @@ export type ReplyForReview = {
   myReview: Pick<Review, 'id' | 'score' | 'severity' | 'categories' | 'comment' | 'created_at'> | null;
 };
 
+// Existence + brand of a reply, on the service-role client: under RLS a reply in
+// a brand you don't cover is invisible, which would turn the 403 into a 404
+// (same reasoning as resolveMemberBrand). Returns ids only; content is read as the user.
+async function replyBrandId(replyId: string): Promise<string> {
+  const { data, error } = await admin.from('replies').select('brand_id').eq('id', replyId).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new NotFoundError('Reply');
+  return data.brand_id;
+}
+
+type ReplyRow = ReplyForReview['reply'] & {
+  brand: ReplyForReview['brand']; specialist: ReplyForReview['specialist'];
+};
+
 // cache(): the segment layout runs this for the access check (so 403/404 are real
 // HTTP statuses, decided before loading.tsx streams a 200) and the page reuses it.
 export const getReplyForReview = cache(async (replyId: string): Promise<ReplyForReview> => {
   const u = await requireRole('team_lead');
   // a malformed id would fail Postgres' uuid cast (500); it is simply "no such reply"
   if (!ReplyId.safeParse(replyId).success) throw new NotFoundError('Reply');
-  const { data, error } = await admin.from('replies')
-    .select(`id, customer_message, reply_text, sent_at, channel, brand_id,
-             brands!inner(id, name, slug, voice_guidelines),
-             profiles!replies_specialist_id_fkey!inner(id, full_name)`)
-    .eq('id', replyId).maybeSingle();
-  if (error) throw error;
-  if (!data) throw new NotFoundError('Reply');
-  await assertBrandMember(u.id, data.brand_id); // 403 before anything else is returned
+  await assertBrandMember(u.id, await replyBrandId(replyId)); // 403 before anything else is read
 
-  const { data: mine, error: mineError } = await admin.from('reviews')
-    .select('id, score, severity, categories, comment, created_at')
-    .eq('reply_id', replyId).eq('reviewer_id', u.id).maybeSingle();
-  if (mineError) throw mineError;
-
-  return {
-    reply: {
-      id: data.id, customer_message: data.customer_message, reply_text: data.reply_text,
-      sent_at: data.sent_at, channel: data.channel,
-    },
-    brand: data.brands,
-    specialist: data.profiles,
-    myReview: mine ?? null,
-  };
+  return asUser(u.id, async tx => {
+    const [data] = await tx<ReplyRow[]>`
+      select r.id, r.customer_message, r.reply_text, r.sent_at, r.channel,
+             json_build_object('id', b.id, 'name', b.name, 'slug', b.slug,
+                               'voice_guidelines', b.voice_guidelines) as brand,
+             json_build_object('id', p.id, 'full_name', p.full_name) as specialist
+      from replies r join brands b on b.id = r.brand_id join profiles p on p.id = r.specialist_id
+      where r.id = ${replyId}`;
+    if (!data) throw new ForbiddenError('Not a member of this brand');
+    const [mine] = await tx<NonNullable<ReplyForReview['myReview']>[]>`
+      select id, score, severity, categories, comment, created_at
+      from reviews where reply_id = ${replyId} and reviewer_id = ${u.id}`;
+    const { brand, specialist, ...reply } = data;
+    return { reply, brand, specialist, myReview: mine ?? null };
+  });
 });
 
 export async function createReview(input: ReviewInput): Promise<{ id: string; brandId: string }> {
   const u = await requireRole('team_lead');
-  const { data: reply, error: replyError } = await admin.from('replies')
-    .select('id, brand_id').eq('id', input.replyId).maybeSingle();
-  if (replyError) throw replyError;
-  if (!reply) throw new NotFoundError('Reply');
-  await assertBrandMember(u.id, reply.brand_id); // before the insert
+  const brandId = await replyBrandId(input.replyId);
+  await assertBrandMember(u.id, brandId); // before the insert; RLS's insert policy checks it again
 
-  const { data, error } = await admin.from('reviews').insert({
-    reply_id: input.replyId, reviewer_id: u.id, score: input.score,
-    severity: input.severity, categories: input.categories, comment: input.comment,
-  }).select('id').single();
-  if (error?.code === '23505') throw new ConflictError('Already reviewed');
-  if (error) throw error;
-  return { id: data.id, brandId: reply.brand_id };
+  try {
+    const [row] = await asUser(u.id, tx => tx<{ id: string }[]>`
+      insert into reviews (reply_id, reviewer_id, score, severity, categories, comment)
+      values (${input.replyId}, ${u.id}, ${input.score}, ${input.severity},
+              string_to_array(${input.categories.join(',')}, ',')::failure_category[], ${input.comment})
+      returning id`);
+    return { id: row.id, brandId };
+  } catch (e: unknown) {
+    const code = (e as { code?: string }).code;
+    if (code === '23505') throw new ConflictError('Already reviewed');
+    if (code === '42501') throw new ForbiddenError('Not allowed to review this reply');
+    throw e;
+  }
 }
 
 // "Save and next" follows the queue's order, oldest unreviewed first, by reusing
 // the queue's own query (replies.ts). It prefers the brand just reviewed (same
 // guidelines on screen), then any member brand.
 export async function nextUnreviewedReplyId(preferBrandId?: string): Promise<string | null> {
-  await requireRole('team_lead');
+  const u = await requireRole('team_lead');
   if (preferBrandId) {
-    const { data, error } = await admin.from('brands').select('slug').eq('id', preferBrandId).maybeSingle();
-    if (error) throw error;
-    const inBrand = data && await nextInQueueOrder(data.slug); // re-checks membership
+    const [brand] = await asUser(u.id, tx => tx<{ slug: string }[]>`
+      select slug from brands where id = ${preferBrandId}`);
+    const inBrand = brand && await nextInQueueOrder(brand.slug); // re-checks membership
     if (inBrand) return inBrand;
   }
   return nextInQueueOrder();

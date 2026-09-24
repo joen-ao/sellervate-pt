@@ -1,6 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
-import { admin } from '@/lib/supabase/admin';
+import { asUser } from '@/lib/supabase/rls';
 import { requireRole } from '@/lib/current-user';
 import { resolveMemberBrand } from '@/lib/data/membership';
 import { CATEGORY_LABEL, type FailureCategory, type Severity } from '@/lib/types';
@@ -45,7 +45,7 @@ function mondayUtc(t: number): number {
 // then reuses the result.
 export const assertBrandStatsAccess = cache(async (slug: string) => {
   const u = await requireRole('team_lead');
-  return resolveMemberBrand(u.id, slug);
+  return { ...(await resolveMemberBrand(u.id, slug)), userId: u.id };
 });
 
 // Access is checked before a single review row is read.
@@ -58,16 +58,17 @@ export async function getBrandStats(slug: string) {
   const firstWeek = mondayUtc(now) - (TREND_WEEKS - 1) * 7 * DAY;
   const since = Math.min(prevFrom, firstWeek);
 
-  // One query, filtered by brand and time window in SQL. The inner join on
-  // replies is what scopes reviews to the brand.
-  const { data, error } = await admin.from('reviews')
-    .select('id, reply_id, score, severity, categories, comment, created_at, '
-      + 'reply:replies!inner(brand_id, specialist_id, specialist:profiles!replies_specialist_id_fkey(full_name))')
-    .eq('reply.brand_id', brand.id)
-    .gte('created_at', new Date(since).toISOString())
-    .order('created_at', { ascending: false })
-    .returns<Row[]>();
-  if (error) throw error;
+  // One query, filtered by brand and time window in SQL, run as the user under
+  // RLS. The join on replies is what scopes reviews to the brand.
+  const data = await asUser(brand.userId, tx => tx<Row[]>`
+    select v.id, v.reply_id, v.score, v.severity, v.categories, v.comment, v.created_at,
+           json_build_object('brand_id', r.brand_id, 'specialist_id', r.specialist_id,
+                             'specialist', json_build_object('full_name', p.full_name)) as reply
+    from reviews v
+    join replies r on r.id = v.reply_id
+    left join profiles p on p.id = r.specialist_id
+    where r.brand_id = ${brand.id} and v.created_at >= ${new Date(since).toISOString()}::timestamptz
+    order by v.created_at desc`);
 
   const at = (r: Row) => Date.parse(r.created_at);
   const cur = data.filter(r => at(r) >= curFrom);

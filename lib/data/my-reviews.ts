@@ -1,5 +1,6 @@
 import 'server-only';
 import { admin } from '@/lib/supabase/admin';
+import { asUser } from '@/lib/supabase/rls';
 import { requireRole } from '@/lib/current-user';
 import { getMemberBrandIds } from '@/lib/data/membership';
 import { ForbiddenError, NotFoundError } from '@/lib/errors';
@@ -23,26 +24,19 @@ export async function listMyReviews(): Promise<{ items: MyReview[]; summary: MyS
   const brandIds = await getMemberBrandIds(u.id);
   if (!brandIds.length) return { items: [], summary: { n: 0, avg: null, critical: 0 } };
 
-  const { data, error } = await admin.from('reviews')
-    .select(`id, reply_id, score, severity, categories, comment, created_at, acknowledged_at,
-             reviewer:profiles!reviews_reviewer_id_fkey!inner(full_name),
-             reply:replies!inner(specialist_id, brand_id, customer_message, reply_text, sent_at,
-               brand:brands!inner(name, slug))`)
-    // the isolation lines: in SQL, on the joined table
-    .eq('reply.specialist_id', u.id)
-    .in('reply.brand_id', brandIds)
-    .order('created_at', { ascending: false })
-    .limit(LIMIT);
-  if (error) throw error;
-
-  const items: MyReview[] = data.map(r => ({
-    id: r.id, replyId: r.reply_id,
-    brandName: r.reply.brand.name, brandSlug: r.reply.brand.slug,
-    reviewerName: r.reviewer.full_name,
-    score: r.score, severity: r.severity, categories: r.categories, comment: r.comment,
-    createdAt: r.created_at, acknowledgedAt: r.acknowledged_at,
-    customerMessage: r.reply.customer_message, replyText: r.reply.reply_text, sentAt: r.reply.sent_at,
-  }));
+  // The isolation lines stay in SQL (specialist_id, brand ids); RLS applies on top.
+  const items = await asUser(u.id, tx => tx<MyReview[]>`
+    select v.id, v.reply_id as "replyId", b.name as "brandName", b.slug as "brandSlug",
+           rv.full_name as "reviewerName", v.score, v.severity, v.categories, v.comment,
+           v.created_at as "createdAt", v.acknowledged_at as "acknowledgedAt",
+           r.customer_message as "customerMessage", r.reply_text as "replyText", r.sent_at as "sentAt"
+    from reviews v
+    join replies r on r.id = v.reply_id
+    join brands b on b.id = r.brand_id
+    join profiles rv on rv.id = v.reviewer_id
+    where r.specialist_id = ${u.id} and r.brand_id in ${tx(brandIds)}
+    order by v.created_at desc
+    limit ${LIMIT}`);
 
   // Deliberate exception to "aggregate in SQL" (see DECISIONS.md): the rows are
   // already isolated in SQL and there are at most LIMIT of them.
@@ -63,27 +57,27 @@ export async function acknowledgeReview(reviewId: string): Promise<void> {
   const u = await requireRole('specialist');
   const brandIds = await getMemberBrandIds(u.id);
 
-  // PostgREST cannot put a subquery in an UPDATE's WHERE, so ownership is two
-  // SQL predicates: (1) the reply carrying this review, only if it is mine...
-  const { data: own, error: ownErr } = await admin.from('replies')
-    .select('id, reviews!inner(id)')
-    .eq('specialist_id', u.id)
-    .in('brand_id', brandIds)
-    .eq('reviews.id', reviewId);
-  if (ownErr) throw ownErr;
-  const ownReplyIds = own.map(r => r.id);
+  // One statement: the ownership check is a subquery in the UPDATE itself, run
+  // as the user, and RLS's update policy (owner specialist only) applies too.
+  const outcome = await asUser(u.id, async tx => {
+    if (!brandIds.length) return 'none' as const;
+    const updated = await tx`
+      update reviews v set acknowledged_at = now()
+      where v.id = ${reviewId} and v.acknowledged_at is null
+        and exists (select 1 from replies r where r.id = v.reply_id
+                    and r.specialist_id = ${u.id} and r.brand_id in ${tx(brandIds)})
+      returning v.id`;
+    if (updated.length) return 'acked' as const;
+    // Zero rows: already acknowledged (fine, first timestamp kept), or not mine.
+    const [own] = await tx`
+      select 1 from reviews v join replies r on r.id = v.reply_id
+      where v.id = ${reviewId} and r.specialist_id = ${u.id}`;
+    return own ? ('acked' as const) : ('none' as const);
+  });
+  if (outcome === 'acked') return;
 
-  if (ownReplyIds.length) {
-    // ...(2) and the update itself only touches reviews on those replies.
-    const { error } = await admin.from('reviews')
-      .update({ acknowledged_at: new Date().toISOString() })
-      .eq('id', reviewId)
-      .in('reply_id', ownReplyIds)
-      .is('acknowledged_at', null);
-    if (error) throw error;
-    return; // zero rows updated here = already acknowledged, which is fine
-  }
-
+  // 404 vs 403 needs to know whether the review exists at all, which RLS hides
+  // from a specialist; this existence check is the one service-role read here.
   const { data: exists, error } = await admin.from('reviews')
     .select('id').eq('id', reviewId).maybeSingle();
   if (error) throw error;
