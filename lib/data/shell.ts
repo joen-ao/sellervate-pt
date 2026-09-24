@@ -44,3 +44,12 @@ export const listPersonas = cache(async (): Promise<Persona[]> => {
     brands: p.brand_members.map(m => m.brands.name).sort(),
   }));
 });
+
+// The sidebar's counts keyed as the sidebar keys them ('total', 'brand:<slug>'),
+// read fresh after a write so an action can hand the client the real numbers.
+export async function getPendingCounts(): Promise<Record<string, number>> {
+  const brands = await getShellBrands();
+  const counts: Record<string, number> = { total: brands.reduce((s, b) => s + b.pending, 0) };
+  for (const b of brands) counts[`brand:${b.slug}`] = b.pending;
+  return counts;
+}

@@ -3,12 +3,16 @@ import { revalidatePath } from 'next/cache';
 import { forbidden, notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createReview, nextUnreviewedReplyId } from '@/lib/data/reviews';
+import { getPendingCounts } from '@/lib/data/shell';
 import { ConflictError, ForbiddenError, NotFoundError } from '@/lib/errors';
 import { ReviewInput } from '@/lib/validation/review';
 
 export type ActionState = {
   fieldErrors?: Partial<Record<keyof ReviewInput, string[]>>;
   formError?: string;
+  // Plain Save: the sidebar's fresh counts. The client applies them directly;
+  // a same-URL redirect repainted the page but not reliably the root layout.
+  saved?: Record<string, number>;
 } | null;
 
 // Typed values live in the form's own state (controlled inputs), so returning an
@@ -35,11 +39,10 @@ export async function submitReview(_prev: ActionState, formData: FormData): Prom
   }
 
   // redirect() throws, so it stays outside the try/catch above
-  revalidatePath('/queue');
-  revalidatePath('/me');
+  revalidatePath('/', 'layout');
   if (parsed.data.andNext) {
     const next = await nextUnreviewedReplyId(brandId);
     redirect(next ? `/reviews/${next}` : '/queue?caught_up=1');
   }
-  redirect(`/reviews/${parsed.data.replyId}`);
+  return { saved: await getPendingCounts() };
 }

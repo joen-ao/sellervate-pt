@@ -19,7 +19,7 @@ export function BrandNav({ slug, name, pending, icons }: Props) {
 
   return (
     <li className="flex flex-col gap-0.5">
-      <SidebarLink href={base} icon={icons.brand} count={pending}
+      <SidebarLink href={base} icon={icons.brand} count={pending} countId={`brand:${slug}`}
         countLabel={`${pending} ${pending === 1 ? 'reply' : 'replies'} to review`}>
         {name}
       </SidebarLink>
