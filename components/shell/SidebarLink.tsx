@@ -36,18 +36,28 @@ export function SidebarLink({ href, icon, count, countLabel, countId, also = [],
       onClick={closeDrawer}
       aria-current={active ? 'page' : undefined}
       className={[
-        'flex items-center gap-3 rounded-field py-1.5 text-sm transition-colors',
-        indent ? 'pl-9 pr-2' : 'px-2',
+        'flex h-8 items-center gap-2.5 rounded-field text-sm transition-colors',
+        indent ? 'pl-8 pr-2' : 'px-2',
         active
-          ? 'bg-base-300 font-medium text-base-content'
-          : 'text-base-content/70 hover:bg-base-300/50 hover:text-base-content',
+          ? 'bg-base-300/70 font-medium text-base-content'
+          : 'text-base-content/65 hover:bg-base-300/40 hover:text-base-content',
       ].join(' ')}
     >
       {icon && <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>{icon}</span>}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {shown ? (
-        <span className="text-xs tabular-nums text-base-content/60" aria-label={countLabel}>{shown}</span>
+        <span className="min-w-5 rounded-full bg-base-300 px-1.5 text-center text-[11px] font-medium leading-5 tabular-nums text-base-content/75" aria-label={countLabel}>{shown}</span>
       ) : null}
+    </Link>
+  );
+}
+
+// An icon-only sidebar link (the account footer's switch): same drawer behaviour.
+export function IconLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} onClick={closeDrawer} title={label} aria-label={label}
+      className="btn btn-square btn-ghost btn-sm text-base-content/60 hover:text-base-content">
+      {children}
     </Link>
   );
 }

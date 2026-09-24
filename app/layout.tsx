@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Source_Serif_4 } from "next/font/google";
 import { unstable_rethrow } from "next/navigation";
 import { AppShell } from "@/components/shell/AppShell";
 import { getCurrentUser } from "@/lib/current-user";
@@ -8,6 +8,13 @@ import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+// Page titles only (DESIGN.md): a serif display over Inter body.
+const serif = Source_Serif_4({
+  variable: "--font-serif-display",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
@@ -36,10 +43,10 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} ${serif.variable} bg-base-100 antialiased`}>
         {user ? <AppShell user={user} brands={brands}>{children}</AppShell> : children}
         {user === undefined && (
-          <p role="status" className="fixed bottom-4 right-4 z-50 rounded-field bg-base-200 px-3 py-1.5 text-sm text-base-content/70">
+          <p role="status" className="fixed bottom-4 right-4 z-50 rounded-field bg-base-300 px-3 py-1.5 text-sm text-base-content/70">
             Switching person is unavailable
           </p>
         )}

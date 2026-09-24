@@ -31,4 +31,6 @@ Two branches ran without a spec of their own, and it is worth saying which and w
 | `feat/navigation` | #14 | `DESIGN.md` ("Shell") | Every screen worked and none of them linked to each other. The brief calls three screens that do not connect a rough edge that is not acceptable, so this was a fix to a finished build, not a feature to specify. |
 | `fix/sidebar-counts` | #15 | — | A bug the shell introduced: the counters did not move after "Got it", Save or Import. Found by clicking through as Dani after #14 merged. |
 
+The dark redesign (`feat/dark-redesign`) has its own set in `redesign/`: `R0-foundations.md` (tokens, type, shell) and one spec per view, R1 persona picker · R2 queue · R3 review panel · R4 my feedback · R5 brand trends · R6 import · R7 client report and state pages. UI only: no DAL, action or migration changes.
+
 `PARALLEL.md` explains how branches run concurrently without stepping on each other. Spanish mirror in `es/`.
