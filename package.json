@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=18.18.0"
   },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "setup": "node scripts/setup-env.mjs",
+    "db:start": "npx --yes supabase@2.117.0 start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:reset": "npx --yes supabase@2.117.0 db reset",

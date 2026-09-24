@@ -16,19 +16,21 @@ first one fails in a way that does not explain itself:
 - **Docker, running.** Supabase's local stack is containers, so `supabase start`
   needs the daemon already up. On a Mac that means Docker Desktop open, not just
   installed.
-- **Node 20 or newer** (`node -v`). Next 15 will not run on 18.
-- **The Supabase CLI**, which is deliberately not a dependency of this package
-  (see the bootstrap PR): either `brew install supabase/tap/supabase`, or drop
-  the `npx supabase@2.117.0` prefix in front of the two `supabase` commands
-  below — which is exactly what `npm run db:reset` does.
+- **Node 18.18 or newer** (`node -v`), which is Next 15's own floor
+  (`^18.18.0 || ^19.8.0 || >= 20.0.0`). Verified on 26.
+- **The Supabase CLI**, deliberately not a dependency of this package (see the
+  bootstrap PR). Either put it on your `PATH` with
+  `brew install supabase/tap/supabase`, or skip it: `npm run db:start` and
+  `npm run db:reset` are the same two commands through `npx`, pinned to the
+  version this was built against.
 
 ## Clone to running
 
 ```
 git clone
-supabase start
-supabase db reset
 npm i
+supabase start        # no CLI on your PATH? npm run db:start
+supabase db reset     #                      npm run db:reset
 npm run setup
 npm run dev
 ```
