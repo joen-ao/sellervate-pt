@@ -8,6 +8,34 @@ that judgement back. Not a helpdesk, not an inbox, no model scores anything.
 branch to its spec. `CLAUDE.md` is what an agent session loads before it writes
 a line.
 
+## What it looks like
+
+A team lead's queue: replies their specialists already sent, oldest first.
+
+![Review queue](docs/screenshots/review-queue.png)
+
+Reviewing one: the exchange on the left, score, severity and what went wrong on
+the right. Keys 1–5 set the score.
+
+![Reviewing a reply](docs/screenshots/review-a-reply.png)
+
+The specialist's side: what their lead said, and "Got it" once it has landed.
+
+![My feedback](docs/screenshots/my-feedback.png)
+
+A brand over time: average score per week, the categories that keep coming up,
+critical events and the split by specialist.
+
+![Brand trends](docs/screenshots/brand-trends.png)
+
+The client report, the page a team lead prints or saves as PDF for the brand.
+
+![Client report](docs/screenshots/client-report.png)
+
+Login is stubbed: this picker is how you become each of the five seed people.
+
+![Switch person](docs/screenshots/switch-person.png)
+
 ## Before you start
 
 Three things have to be on the machine. None is installed by `npm i`, and the
